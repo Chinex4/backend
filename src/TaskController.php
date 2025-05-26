@@ -1,138 +1,126 @@
 <?php
+session_start();
 
 class TaskController
 {
-    public function __construct(private TaskGateway $gateway,
-                                private int $user_id)
+    private array $gateways = [];
+    private $pdo;
+    private $Database;
+
+    public function __construct()
     {
+        $this->Database = new Database();
+        $this->pdo = $this->Database->check_Database($_ENV["DB_NAME"]);
+
+        // Initialize all gateways in a single array
+        $this->gateways = [
+            'user' => new UserGateway($this->pdo),
+            // 'admin' => new AdminGateway($this->pdo),
+            // 'deposit' => new DepositGateway($this->pdo),
+            // 'withdrawal' => new WithdrawalGateway($this->pdo),
+            // 'delete' => new DeleteGateway($this->pdo),
+        ];
     }
-    
-    public function processRequest(string $method, ?string $id): void
+
+    public function processRequest(string $method, string $type, string $action, ?string $id): void
+    {
+        if (!isset($this->gateways[$type])) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Invalid request type']);
+            return;
+        }
+
+        $gateway = $this->gateways[$type];
+
+        switch ($method) {
+            case 'POST':
+                $this->handlePost($gateway, $type, $action);
+                break;
+            case 'GET':
+                $this->handleGet($gateway, $id);
+                break;
+            case 'PUT':
+                $this->handlePut($gateway, $id);
+                break;
+            case 'PATCH':
+                $this->handlePatch($gateway, $id);
+                break;
+            case 'DELETE':
+                $this->handleDelete($gateway, $id);
+                break;
+            default:
+                http_response_code(405);
+                echo json_encode(['error' => 'Method not allowed']);
+                break;
+        }
+    }
+
+    private function handlePost($gateway, $type, $action): void
+    {
+        if ($type === "user") {
+            $rawInput = file_get_contents("php://input");
+            $jsonInput = json_decode($rawInput, true);
+
+            // Use ternary to determine source of data
+            $data = !empty($jsonInput)
+                ? $jsonInput
+                : (!empty($_POST) ? $_POST : json_decode(file_get_contents("php://input"), true));
+            $gateway->handleAction($action, $data);
+
+            return;
+        }
+
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid POST type']);
+    }
+
+    private function handleGet($gateway, ?string $id): void
+    {
+        // Example logic you can expand
+        if ($id) {
+            $result = $gateway->find($id);
+        } else {
+            $result = $gateway->findAll();
+        }
+
+        echo json_encode($result);
+    }
+
+    private function handlePut($gateway, ?string $id): void
     {
         if ($id === null) {
-            
-            if ($method == "GET") {
-                
-                echo json_encode($this->gateway->getAllForUser($this->user_id));
-                
-            } elseif ($method == "POST") {
-                
-                $data = (array) json_decode(file_get_contents("php://input"), true);
-                
-                $errors = $this->getValidationErrors($data);
-                
-                if ( ! empty($errors)) {
-                    
-                    $this->respondUnprocessableEntity($errors);
-                    return;
-                    
-                }
-                
-                $id = $this->gateway->createForUser($this->user_id, $data);
-                
-                $this->respondCreated($id);
-                
-            } else {
-                
-                $this->respondMethodNotAllowed("GET, POST");
-            }
-        } else {
-            
-            $task = $this->gateway->getForUser($this->user_id, $id);
-            
-            if ($task === false) {
-                
-                $this->respondNotFound($id);
-                return;
-            }
-            
-            switch ($method) {
-                
-                case "GET":
-                    echo json_encode($task);
-                    break;
-                
-                case "PATCH":
-                
-                    $data = (array) json_decode(file_get_contents("php://input"), true);
-                    
-                    $errors = $this->getValidationErrors($data, false);
-                    
-                    if ( ! empty($errors)) {
-                        
-                        $this->respondUnprocessableEntity($errors);
-                        return;
-                        
-                    }
-                
-                    $rows = $this->gateway->updateForUser($this->user_id, $id, $data);
-                    echo json_encode(["message" => "Task updated", "rows" => $rows]);
-                    break;
-                    
-                case "DELETE":
-                    $rows = $this->gateway->deleteForUser($this->user_id, $id);
-                    echo json_encode(["message" => "Task deleted", "rows" => $rows]);
-                    break;
-                    
-                default:
-                    $this->respondMethodNotAllowed("GET, PATCH, DELETE");
-            }
+            http_response_code(400);
+            echo json_encode(['error' => 'PUT requests require an ID']);
+            return;
         }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $result = $gateway->update($id, $data);
+        echo json_encode($result);
     }
-    
-    private function respondUnprocessableEntity(array $errors): void
+
+    private function handlePatch($gateway, ?string $id): void
     {
-        http_response_code(422);
-        echo json_encode(["errors" => $errors]);
-    }
-    
-    private function respondMethodNotAllowed(string $allowed_methods): void
-    {
-        http_response_code(405);
-        header("Allow: $allowed_methods");
-    }
-    
-    private function respondNotFound(string $id): void
-    {
-        http_response_code(404);
-        echo json_encode(["message" => "Task with ID $id not found"]);
-    }
-    
-    private function respondCreated(string $id): void
-    {
-        http_response_code(201);
-        echo json_encode(["message" => "Task created", "id" => $id]);
-    }
-    
-    private function getValidationErrors(array $data, bool $is_new = true): array
-    {
-        $errors = [];
-        
-        if ($is_new && empty($data["name"])) {
-            
-            $errors[] = "name is required";
-            
+        if ($id === null) {
+            http_response_code(400);
+            echo json_encode(['error' => 'PATCH requests require an ID']);
+            return;
         }
-        
-        if ( ! empty($data["priority"])) {
-            
-            if (filter_var($data["priority"], FILTER_VALIDATE_INT) === false) {
-                
-                $errors[] = "priority must be an integer";
-                
-            }
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $result = $gateway->partialUpdate($id, $data);
+        echo json_encode($result);
+    }
+
+    private function handleDelete($gateway, ?string $id): void
+    {
+        if ($id === null) {
+            http_response_code(400);
+            echo json_encode(['error' => 'DELETE requests require an ID']);
+            return;
         }
-        
-        return $errors;
+
+        $result = $gateway->delete($id);
+        echo json_encode($result);
     }
 }
-
-
-
-
-
-
-
-
-
-

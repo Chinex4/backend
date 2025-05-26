@@ -1,65 +1,42 @@
 <?php
-
+require_once __DIR__ . '/Services/AuthService.php';
 class UserGateway
 {
-    private PDO $conn;
-    
-    public function __construct(Database $database)
+    private $pdovar;
+    private $authService;
+    private $encrypt;
+    private $mailsender;
+    private $conn;
+    private $createDbTables;
+    private $gateway;
+    private $columns;
+    private $userDataGenerator;
+
+    public function __construct($pdoConnection)
     {
-        $this->conn = $database->getConnection();
+        $this->pdovar = $pdoConnection;
+        $this->authService = new AuthService($this->pdovar);
+        $this->columns = require __DIR__ . '/Config/UserColumns.php';
+      
+        // $this->mailsender = new EmailSender();
+        // $this->response = new JsonResponse();
+        // $this->conn = new Database();
+        // $this->createDbTables = new CreateDbTables($this->pdovar);
     }
-    
-    public function getByAPIKey(string $key): array | false
+
+    public function __destruct()
     {
-        $sql = "SELECT *
-                FROM user
-                WHERE api_key = :api_key";
-                
-        $stmt = $this->conn->prepare($sql);
-        
-        $stmt->bindValue(":api_key", $key, PDO::PARAM_STR);
-        
-        $stmt->execute();
-        
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $this->pdovar = null;
     }
-    
-    public function getByUsername(string $username): array | false
+
+    public function handleAction(string $action, array $data):void
     {
-        $sql = "SELECT *
-                FROM user
-                WHERE username = :username";
-                
-        $stmt = $this->conn->prepare($sql);
-        
-        $stmt->bindValue(":username", $username, PDO::PARAM_STR);
-        
-        $stmt->execute();
-        
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        switch($action){
+            case "registerUser":
+                $this->authService->registerUser($data);
+                break;
+        }
     }
-    
-    public function getByID(int $id): array | false
-    {
-        $sql = "SELECT *
-                FROM user
-                WHERE id = :id";
-                
-        $stmt = $this->conn->prepare($sql);
-        
-        $stmt->bindValue(":id", $id, PDO::PARAM_INT);
-        
-        $stmt->execute();
-        
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
+
+   
 }
-
-
-
-
-
-
-
-
-
