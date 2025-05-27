@@ -513,7 +513,7 @@ class TaskGatewayFunction
 
 
             if (!empty($errors)) {
-                $this->response->respondUnprocessableEntity($errors);
+                $this->response->unprocessableEntity($errors);
                 return;
             }
             return $imgHolder;
@@ -521,7 +521,7 @@ class TaskGatewayFunction
         } else {
             $error = ['this file is not an array'];
             if (!empty($errors)) {
-                $this->response->respondUnprocessableEntity($errors);
+                $this->response->unprocessableEntity($errors);
                 return;
             }
         }
@@ -577,7 +577,7 @@ class TaskGatewayFunction
                 }
 
                 if (!empty($errors)) {
-                    $this->response->respondUnprocessableEntity($errors);
+                    $this->response->unprocessableEntity($errors);
                     return;
                 }
                 return $imgHolder;
