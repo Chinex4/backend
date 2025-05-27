@@ -1,10 +1,10 @@
 <?php
 class JsonResponse
 {
-    public function success($message = "Success", $data = []): void
+    public function success($message = "Success"): void
     {
         http_response_code(200);
-        echo json_encode(["message" => $message, "data" => $data]);
+        echo json_encode(["message" => $message]);
     }
 
     public function created($message = "Resource created successfully"): void

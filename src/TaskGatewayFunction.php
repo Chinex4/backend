@@ -9,7 +9,7 @@ class TaskGatewayFunction
     private $response;
 
     public function __construct($pdoConnection)
-    { 
+    {
         $this->pdo = $pdoConnection;
         $this->createDbTables = new CreateDbTables($pdoConnection);
         $this->mailsender = new EmailSender();
@@ -19,11 +19,11 @@ class TaskGatewayFunction
 
     public function __destruct()
     {
-        $this->pdo = null; 
-        $this->conn = null; 
-        $this->createDbTables = null; 
-        $this->mailsender = null; 
-        $this->response = null; 
+        $this->pdo = null;
+        $this->conn = null;
+        $this->createDbTables = null;
+        $this->mailsender = null;
+        $this->response = null;
     }
 
 
@@ -75,24 +75,25 @@ class TaskGatewayFunction
         }
     }
 
-    public function createNotiMessage($table, array $columns, $BindingArray  , $dataArray)
+    public function createNotiMessage($table, array $columns, $BindingArray, $dataArray)
     {
-        $createTable =  $this->createDbTables->createTable($table, $columns);
+        $createTable = $this->createDbTables->createTable($table, $columns);
         if ($createTable) {
-        $inserted = $this->conn->insertData($this->pdo, $table, $columns, $BindingArray, $dataArray);
-         if ($inserted) {
-            return true;
-         }else{
-            return false;
-         }
+            $inserted = $this->conn->insertData($this->pdo, $table, $columns, $BindingArray, $dataArray);
+            if ($inserted) {
+                return true;
+            } else {
+                return false;
+            }
         }
 
     }
-   public function createNotificationMessage($id, $h, $c, $s=null) {
+    public function createNotificationMessage($id, $h, $c, $s = null)
+    {
         $messageColumn = ['userid', 'messageHeader', 'content', 'sent_at', 'read_at', 'status'];
         $messageColumnArray = ['userid', 'messageHeader', 'content', 'sent_at', 'read_at', 'status'];
         $BindingArray = $this->generateRandomStrings($messageColumnArray);
-        // $s = date('d-m-Y h:i:s a', time());
+        $s = $s || date('d-m-Y h:i:s a', time());
         $r = null;
         $st = null;
         $messageData = [$id, $h, $c, $s, $r, $st];
@@ -100,11 +101,11 @@ class TaskGatewayFunction
         if ($message) {
             return true;
         } else {
-       return false;
+            return false;
         }
     }
-    
- 
+
+
     public function createForUser($pdo, string $tableName, array $columns, array $bindingArray, array $data)
     {
 
@@ -159,25 +160,42 @@ class TaskGatewayFunction
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
         return $data;
     }
-    public function tokenExists($tableName, $id)   
+    public function recordExists(string $tableName, array $conditions): bool
     {
-        $sql = "SELECT COUNT(*) FROM $tableName WHERE accToken = :id";
+        $whereClauses = [];
+        $params = [];
+
+        foreach ($conditions as $column => $value) {
+            $param = ':' . $column;
+            $whereClauses[] = "$column = $param";
+            $params[$param] = $value;
+        }
+
+        $whereString = implode(' AND ', $whereClauses);
+        $sql = "SELECT COUNT(*) FROM $tableName WHERE $whereString";
+
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':id', $id);       
+
+        foreach ($params as $param => $value) {
+            $stmt->bindValue($param, $value);
+        }
+
         $stmt->execute();
         $count = $stmt->fetchColumn();
+
         return $count > 0;
     }
-    public function idExists($tableName, $id)   
+
+    public function idExists($tableName, $id)
     {
         $sql = "SELECT COUNT(*) FROM $tableName WHERE id = :id";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':id', $id);       
+        $stmt->bindValue(':id', $id);
         $stmt->execute();
         $count = $stmt->fetchColumn();
         return $count > 0;
     }
-    
+
     public function getAllColumns($tableName)
     {
         $sql = "SHOW COLUMNS FROM $tableName";
@@ -224,7 +242,7 @@ class TaskGatewayFunction
         return $data;
     }
 
-    public function fetchMultipleDataWithLimit($tableName, $conditions,$limit)
+    public function fetchMultipleDataWithLimit($tableName, $conditions, $limit)
     {
         $sql = "SELECT * FROM $tableName WHERE ";
         $whereConditions = [];
@@ -232,7 +250,7 @@ class TaskGatewayFunction
             $whereConditions[] = "$column = :$column";
         }
         $sql .= implode(" AND ", $whereConditions);
-        $sql .= " ORDER BY id DESC Limit ".$limit; // Adding the ORDER BY clause
+        $sql .= " ORDER BY id DESC Limit " . $limit; // Adding the ORDER BY clause
 
         $stmt = $this->pdo->prepare($sql);
         foreach ($conditions as $column => $value) {
@@ -244,100 +262,100 @@ class TaskGatewayFunction
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return $data;
     }
- 
+
     public function fetchAllDataWithCondition($tableName, $conditions)
-{
-    $sql = "SELECT * FROM $tableName WHERE ";
-    $whereConditions = [];
-    foreach ($conditions as $column => $value) {
-        $whereConditions[] = "$column = :$column";
-    }
-    $sql .= implode(" AND ", $whereConditions);
-    $sql .= " ORDER BY id DESC"; // Adding the ORDER BY clause
-
-    $stmt = null; // Initialize the statement
-    try {
-        $stmt = $this->pdo->prepare($sql);
-        foreach ($conditions as $column => $value) {
-            $stmt->bindValue(":$column", $value);
-        }
-
-        $stmt->execute();
-        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return $data;
-    } catch (PDOException $e) {
-        echo "Fetch Error: " . $e->getMessage();
-        return false;
-    } finally {
-        if ($stmt) {
-            $stmt = null; // Close the statement to free resources
-        }
-    }
-}
-
-public function fetchPaginatedDataWithConditions($tableName, $conditions, $limit, $page)
-{
-    $offset = ($page - 1) * $limit;
-    $sql = "SELECT * FROM $tableName";
-
-    // Add WHERE clause if conditions are provided
-    if (!empty($conditions)) {
+    {
+        $sql = "SELECT * FROM $tableName WHERE ";
         $whereConditions = [];
         foreach ($conditions as $column => $value) {
             $whereConditions[] = "$column = :$column";
         }
-        $sql .= " WHERE " . implode(" AND ", $whereConditions);
+        $sql .= implode(" AND ", $whereConditions);
+        $sql .= " ORDER BY id DESC"; // Adding the ORDER BY clause
+
+        $stmt = null; // Initialize the statement
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            foreach ($conditions as $column => $value) {
+                $stmt->bindValue(":$column", $value);
+            }
+
+            $stmt->execute();
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $data;
+        } catch (PDOException $e) {
+            echo "Fetch Error: " . $e->getMessage();
+            return false;
+        } finally {
+            if ($stmt) {
+                $stmt = null; // Close the statement to free resources
+            }
+        }
     }
 
-    $sql .= " ORDER BY id DESC LIMIT :limit OFFSET :offset";
+    public function fetchPaginatedDataWithConditions($tableName, $conditions, $limit, $page)
+    {
+        $offset = ($page - 1) * $limit;
+        $sql = "SELECT * FROM $tableName";
 
-    $stmt = null;
-    try {
+        // Add WHERE clause if conditions are provided
+        if (!empty($conditions)) {
+            $whereConditions = [];
+            foreach ($conditions as $column => $value) {
+                $whereConditions[] = "$column = :$column";
+            }
+            $sql .= " WHERE " . implode(" AND ", $whereConditions);
+        }
+
+        $sql .= " ORDER BY id DESC LIMIT :limit OFFSET :offset";
+
+        $stmt = null;
+        try {
+            $stmt = $this->pdo->prepare($sql);
+
+            // Bind condition values
+            foreach ($conditions as $column => $value) {
+                $stmt->bindValue(":$column", $value);
+            }
+
+            // Bind pagination
+            $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', (int) $offset, PDO::PARAM_INT);
+
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            echo "Pagination Fetch Error: " . $e->getMessage();
+            return false;
+        } finally {
+            if ($stmt) {
+                $stmt = null;
+            }
+        }
+    }
+
+    public function fetchPaginatedDataWithConditions2($table, $conditions, $limit, $page)
+    {
+        $offset = ($page - 1) * $limit;
+
+        $sql = "SELECT * FROM $table WHERE ";
+        $whereConditions = [];
+        foreach ($conditions as $column => $value) {
+            $whereConditions[] = "$column = :$column";
+        }
+        $sql .= implode(" AND ", $whereConditions);
+        $sql .= " ORDER BY id DESC LIMIT :limit OFFSET :offset";
+
         $stmt = $this->pdo->prepare($sql);
-
-        // Bind condition values
         foreach ($conditions as $column => $value) {
             $stmt->bindValue(":$column", $value);
         }
-
-        // Bind pagination
-        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+        $stmt->bindValue(":limit", (int) $limit, PDO::PARAM_INT);
+        $stmt->bindValue(":offset", (int) $offset, PDO::PARAM_INT);
 
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        echo "Pagination Fetch Error: " . $e->getMessage();
-        return false;
-    } finally {
-        if ($stmt) {
-            $stmt = null;
-        }
     }
-}
-
-public function fetchPaginatedDataWithConditions2($table, $conditions, $limit, $page)
-{
-    $offset = ($page - 1) * $limit;
-
-    $sql = "SELECT * FROM $table WHERE ";
-    $whereConditions = [];
-    foreach ($conditions as $column => $value) {
-        $whereConditions[] = "$column = :$column";
-    }
-    $sql .= implode(" AND ", $whereConditions);
-    $sql .= " ORDER BY id DESC LIMIT :limit OFFSET :offset";
-
-    $stmt = $this->pdo->prepare($sql);
-    foreach ($conditions as $column => $value) {
-        $stmt->bindValue(":$column", $value);
-    }
-    $stmt->bindValue(":limit", (int)$limit, PDO::PARAM_INT);
-    $stmt->bindValue(":offset", (int)$offset, PDO::PARAM_INT);
-
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
 
 
     public function fetchAllData($tableName)
@@ -383,36 +401,39 @@ public function fetchPaginatedDataWithConditions2($table, $conditions, $limit, $
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return $data;
     }
-public function generateRandomCode() { 
-    function generateLetters($length) {
-        $letters = '';
-        for ($i = 0; $i < $length; $i++) {
-            $letters .= chr(rand(65, 90));  
+    public function generateRandomCode()
+    {
+        function generateLetters($length)
+        {
+            $letters = '';
+            for ($i = 0; $i < $length; $i++) {
+                $letters .= chr(rand(65, 90));
+            }
+            return $letters;
         }
-        return $letters;
-    }
- 
-    function generateDigits($length) {
-        $digits = '';
-        for ($i = 0; $i < $length; $i++) {
-            $digits .= rand(0, 9);
+
+        function generateDigits($length)
+        {
+            $digits = '';
+            for ($i = 0; $i < $length; $i++) {
+                $digits .= rand(0, 9);
+            }
+            return $digits;
         }
-        return $digits;
+
+        $prefix = generateLetters(3);
+        $numbers = generateDigits(9);
+        $suffix = generateLetters(2);
+
+        return $prefix . $numbers . $suffix;
     }
- 
-    $prefix = generateLetters(3);  
-    $numbers = generateDigits(9);  
-    $suffix = generateLetters(2);  
 
-    return $prefix . $numbers . $suffix;
-}
- 
 
- 
+
 
     public function genRandomAlphanumericstrings($length_of_string)
-    { 
-        $str_result = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'; 
+    {
+        $str_result = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
         return substr(str_shuffle($str_result), 0, $length_of_string);
     }
 
@@ -436,8 +457,8 @@ public function generateRandomCode() {
     {
         $offset = ($page - 1) * $limit;
         $sql = "SELECT * FROM $tableName";
-        $sql .= " ORDER BY id DESC"; 
-        $sql .= " LIMIT $limit OFFSET $offset"; 
+        $sql .= " ORDER BY id DESC";
+        $sql .= " LIMIT $limit OFFSET $offset";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute();
@@ -447,16 +468,16 @@ public function generateRandomCode() {
 
     public function processImageWithgivenNameFiles($file)
     {
-        $imgHolder ='';
+        $imgHolder = '';
         $errors = [];
 
         $fileDoc = $file;
         if (isset($fileDoc['name']) && is_string($fileDoc['name'])) {
-            $fileName = $fileDoc['name'] ;
-            $fileType = $fileDoc['type'] ;
-            $fileError = $fileDoc['error'] ;
-            $fileSize = $fileDoc['size'] ;
-            $tmp_name = $fileDoc['tmp_name'] ;
+            $fileName = $fileDoc['name'];
+            $fileType = $fileDoc['type'];
+            $fileError = $fileDoc['error'];
+            $fileSize = $fileDoc['size'];
+            $tmp_name = $fileDoc['tmp_name'];
             $currentFile = array(
                 'name' => $fileName,
                 'type' => $fileType,
