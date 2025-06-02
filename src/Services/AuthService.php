@@ -148,6 +148,95 @@ class AuthService
             }
         }
     }
+    public function otp(array $data)
+    {
+        try {
+            $fetchUserCondition = ['email' => $data['email']];
+            $emailData = ['createdAt' => $data['createdAt'], 'email' => $data['email']];
+            $EmailValData = $this->EmailDataGenerator->generateVerificationData($emailData);
+            $bindingArrayforEmailVal = $this->gateway->generateRandomStrings($EmailValData);
+
+            $createEmailVal = $this->createDbTables->createTableWithTypes(EmailValidation, $this->EmailCoulmn);
+            if ($createEmailVal) {
+                $createEmailValTable = $this->connectToDataBase->insertDataWithTypes($this->dbConnection, EmailValidation, $this->EmailCoulmn, $bindingArrayforEmailVal, $EmailValData);
+                if ($createEmailValTable) {
+                    $fetchUser = $this->gateway->fetchData(RegTable, $fetchUserCondition);
+                    $username = $fetchUser['name'];
+                            $sent = $this->mailsender->sendOtpForLogin($fetchUser['email'], $username, $EmailValData['verificationToken']);
+                            if ($sent === true) {
+                                $response = ['status' => 'true'];
+                                $this->response->created($response);
+                            } else {
+
+                                $this->response->unprocessableEntity('could not send mail to user');
+
+                            }
+                         
+                    }
+            }
+        } catch (\Throwable $e) {
+            $this->response->unprocessableEntity($e->getMessage());
+        }
+    }
+    public function verifyLoginOtp(array $data)
+    {
+        try {
+            $email = $data['email'];
+            $otp = $data['otp'];
+
+            $conditionsForEmailval = ['email' => $email, 'verificationToken' => $otp];
+            $conditionsForUser = ['email' => $email];
+
+            $fetchEmailvalDetailsWithEmail = $this->gateway->fetchData(EmailValidation, $conditionsForEmailval);
+            $fetchUserDetailsWithEmail = $this->gateway->fetchData(RegTable, $conditionsForUser);
+
+            if ($fetchEmailvalDetailsWithEmail) {
+                if ($fetchUserDetailsWithEmail) {
+                    $id = $fetchUserDetailsWithEmail['id'];
+                    $emailId = $fetchEmailvalDetailsWithEmail['id'];
+
+                    $updateUserStatus = $this->connectToDataBase->updateData(
+                        $this->dbConnection,
+                        RegTable,
+                        ['emailVerication'],
+                        ['Verified'],
+                        'id',
+                        $fetchUserDetailsWithEmail['id']
+                    );
+
+                    if ($updateUserStatus) {
+                        $h = 'Email Verification Complete';
+                        $c = 'Your email address has been successfully verified. Thank you for confirming your identity and helping us keep your account secure.';
+
+                        $message = $this->gateway->createNotificationMessage($id, $h, $c, $data['createdAt']);
+
+                        if ($message) {
+                     
+                                $deleted = $this->connectToDataBase->deleteData($this->dbConnection, EmailValidation, 'id', $emailId);
+
+                                if ($deleted) {
+                                    $this->response->success('Email verified successfully');
+                                } else {
+                                    $this->response->unprocessableEntity('Failed to delete OTP record from validation table.');
+                                }
+                           
+                        } else {
+                            $this->response->unprocessableEntity('Failed to create verification notification message.');
+                        }
+                    } else {
+                        $this->response->unprocessableEntity('Failed to update user verification status.');
+                    }
+                } else {
+                    $this->response->unprocessableEntity('User with this email was not found.');
+                }
+            } else {
+                $this->response->unprocessableEntity('Invalid or expired verification token.');
+            }
+
+        } catch (\Throwable $e) {
+            $this->response->unprocessableEntity($e->getMessage());
+        }
+    }
     public function verifyEmail(array $data)
     {
         try {

@@ -38,6 +38,12 @@ class UserGateway
             case "verify-email":
                 $this->authService->verifyEmail($data);
                 break;
+            case "verifyLoginOtp":
+                $this->authService->verifyLoginOtp($data);
+                break;
+            case "otp":
+                $this->authService->otp($data);
+                break;
             case "resend-otp":
                 $this->authService->resendOtp($data);
                 break;

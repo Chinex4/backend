@@ -48,6 +48,23 @@ class EmailSender
             return false;
         }
     }
+    public function sendOtpForLogin(string $recipientEmail, string $fullname, string $otpCode): bool
+    {
+        $html = $this->emailTemplate->buildOtpForLoginHtml($fullname, $otpCode, emailLogo, sitemail);
+        $email = (new Email())
+            ->from($this->fromEmail)
+            ->to($recipientEmail)
+            ->subject('Your ' . $this->appName . ' Login Verification Code')
+            ->text('Your verification code is: ' . $otpCode)
+            ->html($html);
+        try {
+            $this->mailer->send($email);
+            return true;
+        } catch (\Throwable $e) {
+            error_log('Email send failed: ' . $e->getMessage());
+            return false;
+        }
+    }
     public function sendWelcomEmail(string $recipientEmail): bool
     {
         $html = $this->emailTemplate::buildWelcomeHtml($recipientEmail, $this->appName, $this->appLiink);
