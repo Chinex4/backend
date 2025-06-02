@@ -13,6 +13,8 @@ class EmailSender
     private string $fromEmail;
     private string $supportEmail;
     private string $appName;
+    private string $appLiink;
+    private string $logo;
     private $emailTemplate;
 
     public function __construct()
@@ -20,6 +22,8 @@ class EmailSender
         $this->fromEmail = sitemail;
         $this->supportEmail = sitemail;
         $this->appName = sitename;
+        $this->appLiink = appLink;
+        $this->logo = emailLogo;
 
         $dsn = SMTP_DSN;
         $transport = Transport::fromDsn($dsn);
@@ -44,7 +48,58 @@ class EmailSender
             return false;
         }
     }
+    public function sendWelcomEmail(string $recipientEmail): bool
+    {
+        $html = $this->emailTemplate::buildWelcomeHtml($recipientEmail, $this->appName, $this->appLiink);
+        $email = (new Email())
+            ->from($this->fromEmail)
+            ->to($recipientEmail)
+            ->subject('Welcome to ' . $this->appName . ', Claim Over 8,000+ USDT Worth of Newcomer
+            Rewards!')
+            ->text('')
+            ->html($html);
+        try {
+            $this->mailer->send($email);
+            return true;
+        } catch (\Throwable $e) {
+            error_log('Email send failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+    public function sendResetPasswordEmail(string $fullname, string $resetToken, string $recipientEmail, string $accToken): bool
+    {
+        $html = $this->emailTemplate->buildResetPasswordHtml($fullname, $resetToken, $recipientEmail, $accToken, $this->logo, $this->supportEmail);
+        $email = (new Email())
+        ->from($this->fromEmail)
+        ->to($recipientEmail)
+        ->subject('Reset Your Password - ' . $this->appName)
+        ->html($html); 
+        try {
+            $this->mailer->send($email);
+            return true;
+        } catch (\Throwable $e) {
+            error_log('Email send failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+    public function sendPasswordChangedEmail(string $fullname, string $recipientEmail): bool
+{
+    $html = $this->emailTemplate->buildPasswordChangedHtml($fullname, $this->logo, $this->supportEmail);
 
+    $email = (new Email())
+        ->from($this->fromEmail)
+        ->to($recipientEmail)
+        ->subject('Your Password Has Been Changed - ' . $this->appName)
+        ->html($html);
 
+    try {
+        $this->mailer->send($email);
+        return true;
+    } catch (\Throwable $e) {
+        error_log('Password change email failed: ' . $e->getMessage());
+        return false;
+    }
+}
 
+    
 }

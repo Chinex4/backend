@@ -35,6 +35,24 @@ class UserGateway
             case "registerUser":
                 $this->authService->registerUser($data);
                 break;
+            case "verify-email":
+                $this->authService->verifyEmail($data);
+                break;
+            case "resend-otp":
+                $this->authService->resendOtp($data);
+                break;
+            case "login":
+                $this->authService->login($data);
+                break;
+            case "forgot-password":
+                $this->authService->forgotPassword($data);
+                break;
+            case "verifyResetPassword":
+                $this->authService->verifyResetPassword($data);
+                break;
+            case "changePassword":
+                $this->authService->changePassword($data);
+                break;
         }
     }
 

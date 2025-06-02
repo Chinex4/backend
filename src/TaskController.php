@@ -15,7 +15,7 @@ class TaskController
         // Initialize all gateways in a single array
         $this->gateways = [
             'user' => new UserGateway($this->pdo),
-            // 'admin' => new AdminGateway($this->pdo),
+            'admin' => new AdminGateway($this->pdo),
             // 'deposit' => new DepositGateway($this->pdo),
             // 'withdrawal' => new WithdrawalGateway($this->pdo),
             // 'delete' => new DeleteGateway($this->pdo),
@@ -58,6 +58,18 @@ class TaskController
     private function handlePost($gateway, $type, $action): void
     {
         if ($type === "user") {
+            $rawInput = file_get_contents("php://input");
+            $jsonInput = json_decode($rawInput, true);
+
+            // Use ternary to determine source of data
+            $data = !empty($jsonInput)
+                ? $jsonInput
+                : (!empty($_POST) ? $_POST : json_decode(file_get_contents("php://input"), true));
+            $gateway->handleAction($action, $data);
+
+            return;
+        }
+        if ($type === "admin") {
             $rawInput = file_get_contents("php://input");
             $jsonInput = json_decode($rawInput, true);
 

@@ -20,7 +20,7 @@ class EmailDataGenerator
             'isVerified' => 'notYet',
         ];
     }
-    
+
 
 
     public function generateVerificationData(array $userData): array
@@ -47,4 +47,23 @@ class EmailDataGenerator
     {
         $this->defaultConfig = array_merge($this->defaultConfig, $config);
     }
+
+    public function generateForgotPasswordData(array $userData): array
+    {
+        $data = [];
+
+        // Required token
+        $data['resetToken'] = bin2hex(random_bytes(22)); // 18 bytes × 2 hex = 36 characters
+
+        // Timestamps
+        $data['createdAt'] = $userData['createdAt'] ?? date('Y-m-d H:i:s');
+
+        // Required fields
+        $data['userEmail'] = $userData['email'];
+        $data['userIdentifier'] = $userData['identifier'] ?? bin2hex(random_bytes(10));
+
+        return $data;
+    }
+
+
 }
