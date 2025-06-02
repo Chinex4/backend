@@ -7,23 +7,21 @@ class TaskController
     private $pdo;
     private $Database;
 
+
     public function __construct()
     {
         $this->Database = new Database();
         $this->pdo = $this->Database->check_Database($_ENV["DB_NAME"]);
 
-        // Initialize all gateways in a single array
         $this->gateways = [
             'user' => new UserGateway($this->pdo),
-            'admin' => new AdminGateway($this->pdo),
-            // 'deposit' => new DepositGateway($this->pdo),
-            // 'withdrawal' => new WithdrawalGateway($this->pdo),
-            // 'delete' => new DeleteGateway($this->pdo),
+            'admin' => new AdminGateway($this->pdo)
         ];
     }
 
     public function processRequest(string $method, string $type, string $action, ?string $id): void
     {
+
         if (!isset($this->gateways[$type])) {
             http_response_code(404);
             echo json_encode(['error' => 'Invalid request type']);
@@ -37,7 +35,7 @@ class TaskController
                 $this->handlePost($gateway, $type, $action);
                 break;
             case 'GET':
-                $this->handleGet($gateway, $id);
+                $this->handleGet($gateway, $type, $action, $id);
                 break;
             case 'PUT':
                 $this->handlePut($gateway, $id);
@@ -86,16 +84,16 @@ class TaskController
         echo json_encode(['error' => 'Invalid POST type']);
     }
 
-    private function handleGet($gateway, ?string $id): void
+    private function handleGet($gateway, $type, $action, $id): void
     {
-        // Example logic you can expand
-        if ($id) {
-            $result = $gateway->find($id);
-        } else {
-            $result = $gateway->findAll();
-        }
 
-        echo json_encode($result);
+        if ($type === "user") {
+            if ($id) {
+                $result = $gateway->handleFetch($action, $id);
+            } else {
+                $result = $gateway->handleFetchAll($action);
+            }
+        }
     }
 
     private function handlePut($gateway, ?string $id): void
