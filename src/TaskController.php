@@ -89,9 +89,16 @@ class TaskController
 
         if ($type === "user") {
             if ($id) {
-                $result = $gateway->handleFetch($action, $id);
+                  $gateway->handleFetch($action, $id);
             } else {
-                $result = $gateway->handleFetchAll($action);
+                 $gateway->handleFetchAll($action);
+            }
+        }
+        if ($type === "admin") {
+            if ($id) {
+                  $gateway->handleFetch($action, $id);
+            } else {
+                 $gateway->handleFetchAll($action);
             }
         }
     }

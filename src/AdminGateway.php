@@ -11,13 +11,13 @@ class AdminGateway
     private $gateway;
     private $columns;
     private $userDataGenerator;
-
+    private $fetch;
     public function __construct($pdoConnection)
     {
         $this->pdovar = $pdoConnection;
         $this->adminauthservice = new adminauthservice($this->pdovar);
         $this->columns = require __DIR__ . '/Config/UserColumns.php';
-      
+        $this->fetch = new FetchGateway($this->pdovar);
         // $this->mailsender = new EmailSender();
         // $this->response = new JsonResponse();
         // $this->conn = new Database();
@@ -29,14 +29,30 @@ class AdminGateway
         $this->pdovar = null;
     }
 
-    public function handleAction(string $action, array $data):void
+    public function handleAction(string $action, array $data): void
     {
-        switch($action){
+        switch ($action) {
             case "login":
                 $this->adminauthservice->adminLogin($data);
                 break;
         }
     }
+    public function handleFetch(string $action, int $id): void
+    {
+        switch ($action) {
+            case "fetchuser":
+                $this->fetch->fetchuser($id);
+                break;
+        }
+    }
+    public function handleFetchAll(string $action): void
+    {
+        switch ($action) {
+            case "fetchAlluser":
+                $this->fetch->fetchAlluser();
+                break;
 
-   
+        }
+    }
+
 }
