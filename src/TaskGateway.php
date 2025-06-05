@@ -163,6 +163,18 @@ class TaskGateway
         
         return $stmt->rowCount();
     }
+    public function getBearerToken(): ?string
+{
+    $headers = apache_request_headers();
+    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+    if ($authHeader && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+        return $matches[1]; // return token string only
+    }
+
+    return null; // token not found or invalid format
+}
+
 }
 
 

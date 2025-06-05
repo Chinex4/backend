@@ -88,17 +88,25 @@ class TaskController
     {
 
         if ($type === "user") {
-            if ($id) {
-                  $gateway->handleFetch($action, $id);
-            } else {
-                 $gateway->handleFetchAll($action);
-            }
+                // $rawInput = file_get_contents("php://input");
+                // $jsonInput = json_decode($rawInput, true);
+                // $data = !empty($jsonInput)
+                //     ? $jsonInput
+                //     : (!empty($_POST) ? $_POST : json_decode(file_get_contents("php://input"), true));
+                $gateway->handleFetch($action,  $id);
+                return;
         }
         if ($type === "admin") {
             if ($id) {
                   $gateway->handleFetch($action, $id);
             } else {
-                 $gateway->handleFetchAll($action);
+                $rawInput = file_get_contents("php://input");
+                $jsonInput = json_decode($rawInput, true);
+                $data = !empty($jsonInput)
+                    ? $jsonInput
+                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents("php://input"), true));
+                $gateway->handleFetchAll($action, $data);
+                return;
             }
         }
     }

@@ -61,23 +61,15 @@ class UserGateway
                 break;
         }
     }
-    public function handleFetch(string $action, int $id): void
+    public function handleFetch(string $action): void
     { 
         switch ($action) {
             case "fetchuser":
-                $this->fetch->fetchuser($id);
+                $this->fetch->fetchUserWithToken();
                 break;
         }
     }
-    public function handleFetchAll( string $action): void
-    {
-        switch ($action) {
-            case "fetchAlluser":
-                $this->fetch->fetchAlluser();
-                break;
-
-        }
-    }
+   
 
 
 }
