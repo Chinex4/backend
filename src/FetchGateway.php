@@ -42,10 +42,9 @@ class FetchGateway
 
         try {
             $decodedPayload = $this->jwtCodec->decode($token);
-
+var_dump($decodedPayload);
             // Fetch user by ID
             $user = $this->gateway->fetchData(RegTable, ['id' => $decodedPayload['sub']]);
-
             return $this->response->success([
                 'userDetails' => $user,
                 'tokenPayload' => $decodedPayload,

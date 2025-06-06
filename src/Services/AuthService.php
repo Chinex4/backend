@@ -316,7 +316,7 @@ class AuthService
                 $accessPayload = [
                     "sub" => $userId,
                     "email" => $fetchUserDetailsWithEmail['email'],
-                    "exp" => strtotime($data['createdAt']) + 900
+                    "exp" => strtotime($data['createdAt']) + 3600 + 24
                 ];
                 $accessToken = $this->jwtCodec->encode($accessPayload);
     
