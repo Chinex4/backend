@@ -316,10 +316,9 @@ class AuthService
                 $accessPayload = [
                     "sub" => $userId,
                     "email" => $fetchUserDetailsWithEmail['email'],
-                    "exp" => strtotime($data['createdAt']) + 3600 + 24
+                    "exp" => strtotime($data['createdAt']) + (60 * 60 * 24)
                 ];
                 $accessToken = $this->jwtCodec->encode($accessPayload);
-    
                 // ✅ Clean up expired tokens before inserting new one
                 $this->refreshTokenGateway->deleteExpired();
     
@@ -342,8 +341,7 @@ class AuthService
                     $_SESSION['UID'] = $userId;
     
                     return $this->response->created([
-                        "accessToken" => $accessToken,
-                        "refreshToken" => $refreshToken
+                        "accessToken" => $accessToken
                     ]);
                 } else {
                     return $this->response->unprocessableEntity(['Unable to update login status']);

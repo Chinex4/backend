@@ -63,8 +63,10 @@ class UserGateway
     }
     public function handleFetch(string $action): void
     { 
+         
+
         switch ($action) {
-            case "fetchuser":
+            case "fetchUser": 
                 $this->fetch->fetchUserWithToken();
                 break;
         }

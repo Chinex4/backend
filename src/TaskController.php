@@ -94,6 +94,7 @@ class TaskController
                 //     ? $jsonInput
                 //     : (!empty($_POST) ? $_POST : json_decode(file_get_contents("php://input"), true));
                 $gateway->handleFetch($action,  $id);
+        
                 return;
         }
         if ($type === "admin") {

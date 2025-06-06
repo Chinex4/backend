@@ -1,16 +1,16 @@
-<?php 
-require_once 'JWTCodec.php'; 
+<?php
+require_once 'JWTCodec.php';
 
 class FetchGateway
 {
-    private $pdovar;    
-    private $gateway;  
+    private $pdovar;
+    private $gateway;
     private $response;
     private $jwtCodec;
 
     public function __construct($pdoConnection)
     {
-        $this->pdovar = $pdoConnection; 
+        $this->pdovar = $pdoConnection;
         $this->gateway = new TaskGatewayFunction($this->pdovar);
         $secretKey = $_ENV['SECRET_KEY'];
         $this->jwtCodec = new JWTCodec($secretKey);
@@ -22,15 +22,16 @@ class FetchGateway
         $this->pdovar = null;
     }
 
-    public function fetchuser($id)
-    {
-        $condForfetch = ['id' => $id];
-        $fetchuser = $this->gateway->fetchData(RegTable, $condForfetch);
-        return $this->response->success(['userDetails' => $fetchuser]);
-    }
+    // public function fetchuser($id)
+    // {
+    //     $condForfetch = ['id' => $id];
+    //     $fetchuser = $this->gateway->fetchData(RegTable, $condForfetch);
+    //     return $this->response->success(['userDetails' => $fetchuser]);
+    // }
 
     public function fetchUserWithToken()
     {
+        
         $headers = apache_request_headers();
         $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
 
@@ -38,17 +39,12 @@ class FetchGateway
             return $this->response->unauthorized("Authorization header missing or invalid");
         }
 
-        $token = $matches[1];
-
+        $token = $matches[1]; 
         try {
             $decodedPayload = $this->jwtCodec->decode($token);
-var_dump($decodedPayload);
             // Fetch user by ID
             $user = $this->gateway->fetchData(RegTable, ['id' => $decodedPayload['sub']]);
-            return $this->response->success([
-                'userDetails' => $user,
-                'tokenPayload' => $decodedPayload,
-            ]);
+            return $this->response->success(['userDetails' => $user]);
         } catch (InvalidArgumentException $e) {
             return $this->response->unauthorized("Invalid token format.");
         } catch (InvalidSignatureException $e) {
