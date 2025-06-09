@@ -7,7 +7,7 @@ require_once __DIR__ . '/Generators/EmailDataGenerator.php';
 use Services\Generators\UserDataGenerator;
 use Services\Generators\EmailDataGenerator;
 
-class AuthService
+class AuthUserService
 {
     private $dbConnection;
     private $regUsercolumns;
@@ -45,7 +45,6 @@ class AuthService
     {
         $this->dbConnection = null;
     }
-
 
     public function registerUser(array $data)
     {
@@ -353,8 +352,6 @@ class AuthService
             return $this->response->unprocessableEntity(['this email is not registered']);
         }
     }
-    
-
     public function resendOtp(array $data)
     {
         $emailData = ['createdAt' => $data['createdAt'], 'email' => $data['email']];

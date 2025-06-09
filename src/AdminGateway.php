@@ -1,27 +1,26 @@
 <?php
-require_once __DIR__ . '/Services/AdminAuthService.php';
+require_once __DIR__ . '/Services/AdminFetchService.php';
+require_once __DIR__ . '/Services/AdminPutService.php';
+require_once __DIR__ . '/Services/AdminPatchService.php';
+require_once __DIR__ . '/Services/AdminDeleteService.php';
+require_once __DIR__ . '/Services/AdminPostService.php';
+
 class AdminGateway
 {
     private $pdovar;
-    private $adminauthservice;
-    private $encrypt;
-    private $mailsender;
-    private $conn;
-    private $createDbTables;
-    private $gateway;
-    private $columns;
-    private $userDataGenerator;
     private $fetch;
+    private $put;
+    private $patch;
+    private $delete;
+    private $post;
     public function __construct($pdoConnection)
     {
         $this->pdovar = $pdoConnection;
-        $this->adminauthservice = new adminauthservice($this->pdovar);
-        $this->columns = require __DIR__ . '/Config/UserColumns.php';
-        $this->fetch = new FetchGateway($this->pdovar);
-        // $this->mailsender = new EmailSender();
-        // $this->response = new JsonResponse();
-        // $this->conn = new Database();
-        // $this->createDbTables = new CreateDbTables($this->pdovar);
+        $this->fetch = new AdminfetchService($this->pdovar);
+        $this->put = new AdminPutService($this->pdovar);
+        $this->patch = new AdminPatchService($this->pdovar);
+        $this->delete = new AdminDeleteService($this->pdovar);
+        $this->post = new AdminPostService($this->pdovar);
     }
 
     public function __destruct()
@@ -29,30 +28,32 @@ class AdminGateway
         $this->pdovar = null;
     }
 
+ 
+  
     public function handleAction(string $action, array $data): void
     {
-        switch ($action) {
-            case "login":
-                $this->adminauthservice->adminLogin($data);
-                break;
-        }
+        $this->post->handlePost($action, $data);
     }
-    public function handleFetch(string $action, int $id): void
+    public function handleFetch(string $action): void
     {
-        switch ($action) {
-            case "fetchuser":
-                $this->fetch->fetchuser($id);
-                break;
-        }
+        $this->fetch->handleFetch($action);
     }
-    public function handleFetchAll(string $action): void
+    public function handleAdminFetchAll(string $action): void
     {
-        switch ($action) {
-            case "fetchAlluser":
-                $this->fetch->fetchAlluser();
-                break;
+        $this->fetch->handleFetch($action);
+    }
+    public function handleAdminPut(string $action,  ?array $data, string $accToken): void
+    {
+        $this->put->handleAdminPut($action, $data, $accToken);
+    }
+    public function handleAdminPatch(string $action,  ?array $data, string $accToken): void
+    {
+        $this->patch->handlePatch($action, $data, $accToken);
+    }
+    public function handleDelete(string $action): void
+    {
+        $this->delete->handleDelete($action);
+    }
 
-        }
-    }
 
 }

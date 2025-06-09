@@ -1,0 +1,74 @@
+<?php
+require_once __DIR__ . '/constants.php';
+require_once __DIR__ . '/EmailSender.php';
+
+
+class PatchGateway
+{
+    private $dbConnection;
+    private $regUsercolumns;
+    private $EmailCoulmn;
+    private $gateway;
+    private $userDataGenerator;
+    private $EmailDataGenerator;
+    private $createDbTables;
+    private $response;
+    private $connectToDataBase;
+    private $mailsender;
+    private $jwtCodec;
+    private $refreshTokenGateway;
+    private $ForgotPasswordColumns;
+
+    public function __construct($pdoConnection)
+    {
+        $this->dbConnection = $pdoConnection;
+        $this->gateway = new TaskGatewayFunction($this->dbConnection); 
+        $this->createDbTables = new CreateDbTables($this->dbConnection);
+        $this->response = new JsonResponse();
+        $this->connectToDataBase = new Database();
+        $this->mailsender = new EmailSender();
+        $key = $_ENV['SECRET_KEY'];
+        $this->jwtCodec = new JWTCodec($key);
+        $this->refreshTokenGateway = new RefreshTokenGateway($pdoConnection, $key);
+    }
+
+    public function __destruct()
+    {
+        $this->dbConnection = null;
+    }
+
+    public function disableLogin(string $accToken)
+    {
+            // $createColumn = $this->createDbTables->createTable(RegTable, ['chinex']);
+            // if ($createColumn) {
+                $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AllowLogin'], ['false'], 'id', $accToken);
+                if ($updated) {
+                    $this->response->created("user login disabled successfully, this user Can not login again except you enable it");
+                } else {
+                    $errors[] = 'error disabling user login';
+                    if (!empty($errors)) {
+                        $this->response->unprocessableEntity($errors);
+                    }
+                }
+            // }
+    }
+    
+    public function enableLogin(string $accToken)
+    {
+             
+                $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AllowLogin'], ['true'], 'id', $accToken);
+                if ($updated) {
+                    $this->response->created("user login enabled successfully, this user Can now login again except you disable it");
+                } else {
+                    $errors[] = 'error disabling user login';
+                    if (!empty($errors)) {
+                        $this->response->unprocessableEntity($errors);
+                    }
+                }
+            
+    }
+    
+
+}
+
+

@@ -89,12 +89,12 @@ class TaskController
             return;
         }
         if ($type === 'admin') {
-            if ($id) {
-                $gateway->handleAdminFetch($action, $id);
-            } else {
+            // if ($id) {
+            //     $gateway->handleAdminFetch($action, $id);
+            // } else {
                 $gateway->handleAdminFetchAll($action);
                 return;
-            }
+            // }
         }
          http_response_code(400);
         echo json_encode(['error' => 'Invalid get type']);
@@ -127,6 +127,7 @@ class TaskController
 
     private function handlePatch($gateway, $type, $action, $id): void
     {
+         
        if ($id) {
             if ($type === 'user') {
                 $rawInput = file_get_contents('php://input');
@@ -142,8 +143,9 @@ class TaskController
                 $jsonInput = json_decode($rawInput, true);
                 $data = !empty($jsonInput)
                     ? $jsonInput
-                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
+                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), associative: true));
                 $gateway->handleAdminPatch($action, $data, $id);
+                return;
             }
         }
         http_response_code(400);

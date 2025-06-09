@@ -1,27 +1,25 @@
 <?php
-require_once __DIR__ . '/Services/AuthService.php';
+require_once __DIR__ . '/Services/UserFetchService.php';
+require_once __DIR__ . '/Services/UserPutService.php';
+require_once __DIR__ . '/Services/UserPatchService.php';
+require_once __DIR__ . '/Services/UserDeleteService.php';
+require_once __DIR__ . '/Services/UserPostService.php';
 class UserGateway
 {
     private $pdovar;
-    private $authService;
-    private $encrypt;
-    private $mailsender;
-    private $conn;
-    private $createDbTables;
-    private $gateway;
-    private $columns;
-    private $userDataGenerator;
     private $fetch;
+    private $put;
+    private $patch;
+    private $delete;
+    private $post;
     public function __construct($pdoConnection)
     {
         $this->pdovar = $pdoConnection;
-        $this->authService = new AuthService($this->pdovar);
-        $this->columns = require __DIR__ . '/Config/UserColumns.php';
-        $this->fetch = new FetchGateway($this->pdovar);
-        // $this->mailsender = new EmailSender();
-        // $this->response = new JsonResponse();
-        // $this->conn = new Database();
-        // $this->createDbTables = new CreateDbTables($this->pdovar);
+        $this->fetch = new UserfetchService($this->pdovar);
+        $this->put = new UserPutService($this->pdovar);
+        $this->patch = new UserPatchService($this->pdovar);
+        $this->delete = new UserDeleteService($this->pdovar);
+        $this->post = new UserPostService($this->pdovar);
     }
 
     public function __destruct()
@@ -31,54 +29,26 @@ class UserGateway
 
     public function handleAction(string $action, array $data): void
     {
-        switch ($action) {
-            case "registerUser":
-                $this->authService->registerUser($data);
-                break;
-            case "verify-email":
-                $this->authService->verifyEmail($data);
-                break;
-            case "verifyLoginOtp":
-                $this->authService->verifyLoginOtp($data);
-                break;
-            case "otp":
-                $this->authService->otp($data);
-                break;
-            case "resend-otp":
-                $this->authService->resendOtp($data);
-                break;
-            case "login":
-                $this->authService->login($data);
-                break;
-            case "forgot-password":
-                $this->authService->forgotPassword($data);
-                break;
-            case "verifyResetPassword":
-                $this->authService->verifyResetPassword($data);
-                break;
-            case "changePassword":
-                $this->authService->changePassword($data);
-                break;
-        }
+        $this->post->handlePost($action, $data);
+
     }
     public function handleFetch(string $action): void
     {
-        switch ($action) {
-            case "fetchUser": 
-                $this->fetch->fetchUserWithToken();
-                break;
-        }
+        $this->fetch->handleFetch($action);
     }
-  
     public function handlePut(string $action): void
-    { 
-        switch ($action) {
-            case "fetchUser": 
-                $this->fetch->fetchUserWithToken();
-                break;
-        }
+    {
+        $this->put->handlePut($action);
     }
-   
+    public function handlePatch(string $action): void
+    {
+        $this->patch->handlePatch($action);
+    }
+    public function handleDelete(string $action): void
+    {
+        $this->delete->handleDelete($action);
+    }
+
 
 
 }
