@@ -7,11 +7,10 @@ class TaskController
     private $pdo;
     private $Database;
 
-
     public function __construct()
     {
         $this->Database = new Database();
-        $this->pdo = $this->Database->check_Database($_ENV["DB_NAME"]);
+        $this->pdo = $this->Database->check_Database($_ENV['DB_NAME']);
 
         $this->gateways = [
             'user' => new UserGateway($this->pdo),
@@ -21,7 +20,6 @@ class TaskController
 
     public function processRequest(string $method, string $type, string $action, ?string $id): void
     {
-
         if (!isset($this->gateways[$type])) {
             http_response_code(404);
             echo json_encode(['error' => 'Invalid request type']);
@@ -38,13 +36,13 @@ class TaskController
                 $this->handleGet($gateway, $type, $action, $id);
                 break;
             case 'PUT':
-                $this->handlePut($gateway, $id);
+                $this->handlePut($gateway, $type, $action, $id);
                 break;
             case 'PATCH':
-                $this->handlePatch($gateway, $id);
+                $this->handlePatch($gateway, $type, $action, $id);
                 break;
             case 'DELETE':
-                $this->handleDelete($gateway, $id);
+                $this->handleDelete($gateway, $type, $action, $id);
                 break;
             default:
                 http_response_code(405);
@@ -55,26 +53,26 @@ class TaskController
 
     private function handlePost($gateway, $type, $action): void
     {
-        if ($type === "user") {
-            $rawInput = file_get_contents("php://input");
+        if ($type === 'user') {
+            $rawInput = file_get_contents('php://input');
             $jsonInput = json_decode($rawInput, true);
 
             // Use ternary to determine source of data
             $data = !empty($jsonInput)
                 ? $jsonInput
-                : (!empty($_POST) ? $_POST : json_decode(file_get_contents("php://input"), true));
+                : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
             $gateway->handleAction($action, $data);
 
             return;
         }
-        if ($type === "admin") {
-            $rawInput = file_get_contents("php://input");
+        if ($type === 'admin') {
+            $rawInput = file_get_contents('php://input');
             $jsonInput = json_decode($rawInput, true);
 
             // Use ternary to determine source of data
             $data = !empty($jsonInput)
                 ? $jsonInput
-                : (!empty($_POST) ? $_POST : json_decode(file_get_contents("php://input"), true));
+                : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
             $gateway->handleAction($action, $data);
 
             return;
@@ -86,67 +84,86 @@ class TaskController
 
     private function handleGet($gateway, $type, $action, $id): void
     {
-
-        if ($type === "user") {
-                // $rawInput = file_get_contents("php://input");
-                // $jsonInput = json_decode($rawInput, true);
-                // $data = !empty($jsonInput)
-                //     ? $jsonInput
-                //     : (!empty($_POST) ? $_POST : json_decode(file_get_contents("php://input"), true));
-                $gateway->handleFetch($action,  $id);
-        
-                return;
+        if ($type === 'user') {
+            $gateway->handleFetch($action);
+            return;
         }
-        if ($type === "admin") {
+        if ($type === 'admin') {
             if ($id) {
-                  $gateway->handleFetch($action, $id);
+                $gateway->handleAdminFetch($action, $id);
             } else {
-                $rawInput = file_get_contents("php://input");
-                $jsonInput = json_decode($rawInput, true);
-                $data = !empty($jsonInput)
-                    ? $jsonInput
-                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents("php://input"), true));
-                $gateway->handleFetchAll($action, $data);
+                $gateway->handleAdminFetchAll($action);
                 return;
             }
         }
+         http_response_code(400);
+        echo json_encode(['error' => 'Invalid get type']);
     }
 
-    private function handlePut($gateway, ?string $id): void
+    private function handlePut($gateway, $type, $action, $id): void
     {
-        if ($id === null) {
-            http_response_code(400);
-            echo json_encode(['error' => 'PUT requests require an ID']);
-            return;
+        if ($id) {
+            if ($type === 'user') {
+                $rawInput = file_get_contents('php://input');
+                $jsonInput = json_decode($rawInput, true);
+                $data = !empty($jsonInput)
+                    ? $jsonInput
+                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
+                $gateway->handleUserPut($action, $data, $id);
+                return;
+            }
+            if ($type === 'admin') {
+                        $rawInput = file_get_contents('php://input');
+                $jsonInput = json_decode($rawInput, true);
+                $data = !empty($jsonInput)
+                    ? $jsonInput
+                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
+                $gateway->handleAdminPut($action, $data, $id);
+            }
         }
-
-        $data = json_decode(file_get_contents('php://input'), true);
-        $result = $gateway->update($id, $data);
-        echo json_encode($result);
+        http_response_code(400);
+   echo json_encode(['error' => 'Invalid put type']);
     }
 
-    private function handlePatch($gateway, ?string $id): void
+    private function handlePatch($gateway, $type, $action, $id): void
     {
-        if ($id === null) {
-            http_response_code(400);
-            echo json_encode(['error' => 'PATCH requests require an ID']);
-            return;
+       if ($id) {
+            if ($type === 'user') {
+                $rawInput = file_get_contents('php://input');
+                $jsonInput = json_decode($rawInput, true);
+                $data = !empty($jsonInput)
+                    ? $jsonInput
+                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
+                $gateway->handleUserPatch($action, $data, $id);
+                return;
+            }
+            if ($type === 'admin') {
+                        $rawInput = file_get_contents('php://input');
+                $jsonInput = json_decode($rawInput, true);
+                $data = !empty($jsonInput)
+                    ? $jsonInput
+                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
+                $gateway->handleAdminPatch($action, $data, $id);
+            }
         }
-
-        $data = json_decode(file_get_contents('php://input'), true);
-        $result = $gateway->partialUpdate($id, $data);
-        echo json_encode($result);
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid patch type']);
     }
 
-    private function handleDelete($gateway, ?string $id): void
+    private function handleDelete($gateway, $type, $action, $id): void
     {
-        if ($id === null) {
-            http_response_code(400);
-            echo json_encode(['error' => 'DELETE requests require an ID']);
-            return;
+       if ($type === 'admin') {
+            if ($id) {
+                $gateway->handleAdminDelete($action, $id);
+            }  
+        }
+       if ($type === 'user') {
+            if ($id) {
+                $gateway->handleUserDelete($action, $id);
+            }  
         }
 
-        $result = $gateway->delete($id);
-        echo json_encode($result);
+     http_response_code(400);
+     echo json_encode(['error' => 'Invalid delete type']);
     }
 }
