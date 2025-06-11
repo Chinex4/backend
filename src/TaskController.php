@@ -119,6 +119,7 @@ class TaskController
                     ? $jsonInput
                     : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
                 $gateway->handleAdminPut($action, $data, $id);
+                return;
             }
         }
         http_response_code(400);
@@ -158,11 +159,13 @@ class TaskController
             if ($id) {
                 $gateway->handleAdminDelete($action, $id);
             }  
+            return;
         }
        if ($type === 'user') {
             if ($id) {
                 $gateway->handleUserDelete($action, $id);
             }  
+            return;
         }
 
      http_response_code(400);

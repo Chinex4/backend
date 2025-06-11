@@ -387,7 +387,44 @@ class Database
             return false;
         }
     }
-
+    public function updateDataWithArrayKey(PDO $pdo, string $tableName, array $columns, array $data, string $whereColumn, $whereValue)
+    {
+        // var_dump(count($columns), count($data));
+        // var_dump($columns, $data);
+    
+        // Check if the number of columns and data elements match
+        if (count($columns) !== count($data)) {
+            throw new InvalidArgumentException("Number of columns and data elements must match");
+        }
+    
+        $setClause = '';
+        foreach ($columns as $column) {
+            $setClause .= "$column = :$column, ";
+        }
+        $setClause = rtrim($setClause, ', ');
+    
+        $sql = "UPDATE $tableName SET $setClause WHERE $whereColumn = :whereValue";
+    
+        try {
+            $stmt = $pdo->prepare($sql);
+            // var_dump($stmt);
+    
+            foreach ($columns as $column) {
+                $stmt->bindValue(':' . $column, $data[$column]);
+                // var_dump(':' . $column, $data[$column]);
+            }
+    
+            $stmt->bindValue(':whereValue', trim($whereValue));
+            // var_dump(':whereValue', $whereValue);
+            // var_dump($sql);
+    
+            $stmt->execute();
+            return true;
+        } catch (PDOException $e) {
+            echo "Error: " . $e->getMessage();
+            return false;
+        }
+    }
     public function deleteMultipleData(PDO $pdo, array $tableNames, string $whereColumn, $whereValue)
     {
         try {

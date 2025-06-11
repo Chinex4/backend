@@ -22,7 +22,7 @@ class PutGateway
     public function __construct($pdoConnection)
     {
         $this->dbConnection = $pdoConnection;
-        $this->gateway = new TaskGatewayFunction($this->dbConnection); 
+        $this->gateway = new TaskGatewayFunction($this->dbConnection);
         $this->createDbTables = new CreateDbTables($this->dbConnection);
         $this->response = new JsonResponse();
         $this->connectToDataBase = new Database();
@@ -39,12 +39,18 @@ class PutGateway
 
     public function updateUser(array $data, string $accToken)
     {
-        var_dump($data,
-        $accToken);
+        unset($data['accToken']);
+        $keys = array_keys($data);
+        $updated = $this->connectToDataBase->updateDataWithArrayKey($this->dbConnection, RegTable, $keys, $data, 'accToken', $accToken); 
+        if ($updated) {
+            $this->response->created("User details updated successfully.");
+        } else {
+            $this->response->unprocessableEntity('Error updating user details.');
+        }
         
     }
-    
-   
+
+
 
 }
 

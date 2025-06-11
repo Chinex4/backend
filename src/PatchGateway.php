@@ -22,7 +22,7 @@ class PatchGateway
     public function __construct($pdoConnection)
     {
         $this->dbConnection = $pdoConnection;
-        $this->gateway = new TaskGatewayFunction($this->dbConnection); 
+        $this->gateway = new TaskGatewayFunction($this->dbConnection);
         $this->createDbTables = new CreateDbTables($this->dbConnection);
         $this->response = new JsonResponse();
         $this->connectToDataBase = new Database();
@@ -39,35 +39,27 @@ class PatchGateway
 
     public function disableLogin(string $accToken)
     {
-            // $createColumn = $this->createDbTables->createTable(RegTable, ['chinex']);
-            // if ($createColumn) {
-                $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AllowLogin'], ['false'], 'id', $accToken);
-                if ($updated) {
-                    $this->response->created("user login disabled successfully, this user Can not login again except you enable it");
-                } else {
-                    $errors[] = 'error disabling user login';
-                    if (!empty($errors)) {
-                        $this->response->unprocessableEntity($errors);
-                    }
-                }
-            // }
+        // $createColumn = $this->createDbTables->createTable(RegTable, ['chinex']);
+        // if ($createColumn) {
+        $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AllowLogin'], ['false'], 'id', $accToken);
+        if ($updated) {
+            $this->response->created("user login disabled successfully, this user Can not login again except you enable it");
+        } else {
+            $this->response->unprocessableEntity('error disabling user login');
+        }
+        // }
     }
-    
+
     public function enableLogin(string $accToken)
     {
-             
-                $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AllowLogin'], ['true'], 'id', $accToken);
-                if ($updated) {
-                    $this->response->created("user login enabled successfully, this user Can now login again except you disable it");
-                } else {
-                    $errors[] = 'error disabling user login';
-                    if (!empty($errors)) {
-                        $this->response->unprocessableEntity($errors);
-                    }
-                }
-            
+        $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AllowLogin'], ['true'], 'id', $accToken);
+        if ($updated) {
+            $this->response->created("user login enabled successfully, this user Can now login again except you disable it");
+        } else {
+            $this->response->unprocessableEntity('error disabling user login');
+        }
     }
-    
+
 
 }
 
