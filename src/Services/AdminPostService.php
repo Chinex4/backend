@@ -24,6 +24,9 @@ class AdminPostService{
             case "login":
                 $this->adminauthservice->adminLogin($data);
                 break;
+            case "resendVerification":
+                $this->adminauthservice->resendVerification($data);
+                break;
         }
     }
 }

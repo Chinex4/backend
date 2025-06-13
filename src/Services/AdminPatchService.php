@@ -35,6 +35,12 @@ class AdminPatchService{
             case "enableLogin": 
                 $this->patch->enableLogin($accToken);
                 break;
+            case "disableAlert": 
+                $this->patch->disableAlert($accToken);
+                break;
+            case "enableAlert": 
+                $this->patch->enableAlert($accToken);
+                break;
         }
     }
 }

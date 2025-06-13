@@ -68,6 +68,21 @@ class AdminAuthService
                 $this->response->unprocessableEntity('email address is wrong try again with a correct enail');
         }
     }
+    public function resendVerification(array $data)
+    {
+        $emailData = ['createdAt' => $data['createdAt'], 'email' => $data['email']];
+        $EmailValData = $this->EmailDataGenerator->generateVerificationData($emailData);
+        $fetchUserCondition = ['accToken' => $data['userId']];
+        $fetchUser = $this->gateway->fetchData(RegTable, $fetchUserCondition); 
+        $username = $fetchUser['name'];
+        $bindingArrayforEmailVal = $this->gateway->generateRandomStrings($EmailValData);
+        $createEmailVal = $this->createDbTables->createTableWithTypes(EmailValidation, $this->EmailCoulmn);
+        if ($createEmailVal) {
+            $createEmailValTable = $this->connectToDataBase->insertDataWithTypes($this->dbConnection, EmailValidation, $this->EmailCoulmn, $bindingArrayforEmailVal, $EmailValData);
+            if ($createEmailValTable) {
+            }
+        }
+    }
     
   
 

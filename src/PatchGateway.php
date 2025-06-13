@@ -41,7 +41,7 @@ class PatchGateway
     {
         // $createColumn = $this->createDbTables->createTable(RegTable, ['chinex']);
         // if ($createColumn) {
-        $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AllowLogin'], ['false'], 'id', $accToken);
+        $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AllowLogin'], ['false'], 'accToken', $accToken);
         if ($updated) {
             $this->response->created("user login disabled successfully, this user Can not login again except you enable it");
         } else {
@@ -49,10 +49,35 @@ class PatchGateway
         }
         // }
     }
+    public function disableAlert(string $accToken)
+    {
+        // $createColumn = $this->createDbTables->createTable(RegTable, ['chinex']);
+        // if ($createColumn) {
+        $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['allowMessage'], ['false'], 'accToken', $accToken);
+    
+        if ($updated) {
+            $this->response->created("Alert messages disabled successfully for this user.");
+        } else {
+            $this->response->unprocessableEntity("Error disabling alert messages for this user.");
+        }
+        // }
+    }
+    
+    public function enableAlert(string $accToken)
+{
+    $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['allowMessage'], ['true'], 'accToken', $accToken);
+
+    if ($updated) {
+        $this->response->created("Alert messages enabled successfully for this user.");
+    } else {
+        $this->response->unprocessableEntity("Error enabling alert messages for this user.");
+    }
+}
+
 
     public function enableLogin(string $accToken)
     {
-        $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AllowLogin'], ['true'], 'id', $accToken);
+        $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AllowLogin'], ['true'], 'accToken', $accToken);
         if ($updated) {
             $this->response->created("user login enabled successfully, this user Can now login again except you disable it");
         } else {

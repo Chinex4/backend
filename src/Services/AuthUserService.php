@@ -53,7 +53,6 @@ class AuthUserService
         $emailData = ['createdAt' => $data['createdAt'], 'email' => $data['email']];
         $EmailValData = $this->EmailDataGenerator->generateVerificationData($emailData);
 
-
         $checkMailCond = ['email' => $regdata['email']];
         $arrayRecord = ['uid' => $data['referral']];
         $result = $this->createDbTables->createTableWithTypes(RegTable, $this->regUsercolumns);
