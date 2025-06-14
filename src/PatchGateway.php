@@ -37,6 +37,30 @@ class PatchGateway
         $this->dbConnection = null;
     }
 
+    public function enableOtp(string $accToken)
+    {
+        $createColumn = $this->createDbTables->createTable(RegTable, ['allowOtp']);
+        if ($createColumn) {
+        $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['allowOtp'], ['true'], 'accToken', $accToken);
+        if ($updated) {
+            $this->response->created("OTP login has been enabled for this user.");
+        } else {
+            $this->response->unprocessableEntity('error disabling user login');
+        }
+        }
+    }
+    public function disableOtp(string $accToken)
+    {
+        $createColumn = $this->createDbTables->createTable(RegTable, ['allowOtp']);
+        if ($createColumn) {
+        $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['allowOtp'], ['false'], 'accToken', $accToken);
+        if ($updated) {
+            $this->response->created("OTP login has been disabled for this user.");
+        } else {
+            $this->response->unprocessableEntity('error disabling user login');
+        }
+        }
+    }
     public function disableLogin(string $accToken)
     {
         // $createColumn = $this->createDbTables->createTable(RegTable, ['chinex']);
@@ -73,7 +97,7 @@ class PatchGateway
         $this->response->unprocessableEntity("Error enabling alert messages for this user.");
     }
 }
-
+ 
 
     public function enableLogin(string $accToken)
     {

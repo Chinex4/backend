@@ -41,5 +41,6 @@ return [
     'deviceType' => 'VARCHAR(100) DEFAULT NULL',
     'lastLogin' => 'VARCHAR(50) DEFAULT NULL',
     'tokenRevoked' => 'VARCHAR(10) DEFAULT "false"', 
+    'allowOtp' => 'VARCHAR(100) DEFAULT "false"', 
 
 ];

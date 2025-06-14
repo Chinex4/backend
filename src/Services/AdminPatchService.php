@@ -41,6 +41,12 @@ class AdminPatchService{
             case "enableAlert": 
                 $this->patch->enableAlert($accToken);
                 break;
+            case "enableOtp": 
+                $this->patch->enableOtp($accToken);
+                break;
+            case "disableOtp": 
+                $this->patch->disableOtp($accToken);
+                break;
             
         }
     }

@@ -51,7 +51,8 @@ class UserDataGenerator
             'userAgent' => null,
             'deviceType' => null,
             'lastLogin' => null,
-            'tokenRevoked' => 'false'
+            'tokenRevoked' => 'false',
+            'allowOtp' => null
         ];
     }
 
