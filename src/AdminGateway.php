@@ -50,9 +50,9 @@ class AdminGateway
     {
         $this->patch->handlePatch($action, $data, $accToken);
     }
-    public function handleDelete(string $action): void
+    public function handleAdminDelete(string $action, int $id): void
     {
-        $this->delete->handleDelete($action);
+        $this->delete->handleDelete($action, $id);
     }
 
 

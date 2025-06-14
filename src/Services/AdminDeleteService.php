@@ -10,11 +10,11 @@ class AdminDeleteService{
     private $gateway;
     private $columns;
     private $userDataGenerator;
-    private $fetch;
+    private $delete;
     public function __construct($pdoConnection)
     {
         $this->pdovar = $pdoConnection; 
-        $this->fetch = new FetchGateway($this->pdovar);
+        $this->delete = new DeleteGateway($this->pdovar);
         // $this->mailsender = new EmailSender();
         // $this->response = new JsonResponse();
         // $this->conn = new Database();
@@ -26,11 +26,11 @@ class AdminDeleteService{
         $this->pdovar = null;
     }
 
-    public function handleDelete(string $action): void
+    public function handleDelete(string $action, $id): void
     {
         switch ($action) {
-            case "fetchUser": 
-                $this->fetch->fetchUserWithToken();
+            case "deleteWallet": 
+                $this->delete->deleteWallet($id);
                 break;
         }
     }
