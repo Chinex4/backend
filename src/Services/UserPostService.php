@@ -48,6 +48,9 @@ class UserPostService{
             case "changePassword":
                 $this->authService->changePassword($data);
                 break;
+            case "insert-coins":
+                $this->authService->insertcoins($data);
+                break;
         }
     }
 }

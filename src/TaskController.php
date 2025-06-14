@@ -19,7 +19,7 @@ class TaskController
     }
 
     public function processRequest(string $method, string $type, string $action, ?string $id): void
-    {
+    { 
         if (!isset($this->gateways[$type])) {
             http_response_code(404);
             echo json_encode(['error' => 'Invalid request type']);

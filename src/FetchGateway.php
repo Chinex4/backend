@@ -61,4 +61,10 @@ class FetchGateway
         $fetchuser = $this->gateway->fetchAllData(RegTable);
         return $this->response->success(['userDetails' => $fetchuser]);
     }
+    public function fetchWallets()
+    {
+        $wallet = $this->gateway->fetchAllData(wallet);
+
+        return $this->response->success(  $wallet);
+    }
 }

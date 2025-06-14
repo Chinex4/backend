@@ -41,6 +41,7 @@ class AdminPatchService{
             case "enableAlert": 
                 $this->patch->enableAlert($accToken);
                 break;
+            
         }
     }
 }

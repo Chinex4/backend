@@ -32,6 +32,9 @@ class AdminfetchService{
             case "fetchAlluser": 
                 $this->fetch->fetchAlluser();
                 break;
+            case "fetchWallets": 
+                $this->fetch->fetchWallets();
+                break;
         }
     }
 }

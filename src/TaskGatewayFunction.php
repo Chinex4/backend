@@ -361,7 +361,7 @@ class TaskGatewayFunction
     public function fetchAllData($tableName)
     {
         $sql = "SELECT * FROM $tableName";
-        $sql .= " ORDER BY id DESC"; // Adding the ORDER BY clause
+        $sql .= " ORDER BY id DESC";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute();

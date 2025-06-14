@@ -509,6 +509,45 @@ class AuthUserService
             $this->response->unprocessableEntity($e->getMessage());
         }
     }
+    public function insertcoins(array $data)
+    {
+        try {
+            $columns = ['coin_id', 'symbol', 'name'];
+            $inserted = 0;
+        
+            foreach ($data as $item) {
+                $row = [
+                    'coin_id' => $item['id'],
+                    'symbol'  => $item['symbol'],
+                    'name'    => $item['name']
+                ];
+        
+                // Generate binding keys
+                $bindingArray = ['coin_id', 'symbol', 'name'];
+        
+                $success = $this->connectToDataBase->insertData(
+                    $this->dbConnection,
+                    wallet,
+                    $columns,
+                    $bindingArray,
+                    $row
+                );
+        
+                if ($success) {
+                    $inserted++;
+                }
+            }
+        
+            if ($inserted > 0) {
+                $this->response->success("Inserted $inserted records.");
+            } else {
+                $this->response->unprocessableEntity('Could not insert any records');
+            }
+        } catch (\Throwable $e) {
+            $this->response->unprocessableEntity($e->getMessage());
+        }
+        
+    }
 
 }
 

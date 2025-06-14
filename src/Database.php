@@ -3,7 +3,7 @@
 class Database
 {
 
-     
+
     public function check_Database(string $dbname)
     {
         $database = new dbconnect("", $_ENV["DB_HOST"], $_ENV["DB_USER"], $_ENV["DB_PASS"]);
@@ -14,7 +14,7 @@ class Database
             $stmt = $dbConnection->prepare($query);
             $stmt->bindParam(':dbname', $dbnameToCheck, PDO::PARAM_STR);
             $stmt->execute();
-    
+
             if ($stmt->rowCount() > 0) {
                 // Database exists, return a PDO connection for the target database
                 $db = new dbconnect($dbnameToCheck, $_ENV["DB_HOST"], $_ENV["DB_USER"], $_ENV["DB_PASS"]);
@@ -32,8 +32,8 @@ class Database
         }
         return false; // Initial connection failed
     }
-    
-   public function check_Table(string $tableName, $dbConnection)
+
+    public function check_Table(string $tableName, $dbConnection)
     {
         $tableName = trim($tableName);
         try {
@@ -90,7 +90,7 @@ class Database
         return $columns;
     }
 
- 
+
     public function AlterTableUpdate(string $tableName, PDO $dbConnection, array $columns, string $last, array $data, string $whereColumn, $whereValue)
     {
         // Check if columns already exist in the table
@@ -192,8 +192,8 @@ class Database
             }
 
             $query = rtrim($query, ',');
-                // var_dump($default);
-           
+            // var_dump($default);
+
             try {
                 $dbConnection->exec($query);
                 return true;
@@ -206,25 +206,25 @@ class Database
 
         return true; // No new columns to add
     }
- 
+
     public function insertDataWithTypes(PDO $pdo, string $tableName, array $columns, array $bindingArray, array $data)
     {
         // Validate: column count and data count must match
         if (count($columns) !== count($data)) {
             throw new InvalidArgumentException("Number of columns and data elements must match");
         }
-    
+
         // Validate column sizes safely
         foreach ($data as $key => $value) {
             if (array_key_exists($key, $columns)) {
                 $columnDef = $columns[$key];
-    
+
                 // Extract size from VARCHAR(x), CHAR(x), etc.
                 preg_match('/\((\d+)\)/', $columnDef, $matches);
-    
+
                 if (!is_null($value) && isset($matches[1])) {
-                    $maxLength = (int)$matches[1];
-    
+                    $maxLength = (int) $matches[1];
+
                     // Only check length if value is a string
                     if (is_string($value) && strlen($value) > $maxLength) {
                         throw new Exception("Value for column '$key' exceeds allowed length of $maxLength");
@@ -232,25 +232,25 @@ class Database
                 }
             }
         }
-    
+
         // Prepare SQL query
         $columnNames = implode(', ', array_keys($columns));
         $valuePlaceholders = ':' . implode(', :', $bindingArray);
         $sql = "INSERT INTO $tableName ($columnNames) VALUES ($valuePlaceholders)";
-    
+
         $stmt = $pdo->prepare($sql);
         $dataKeys = array_keys($data);
         $dataValues = array_values($data);
-    
+
         for ($i = 0; $i < count($dataKeys); $i++) {
             $column = $dataKeys[$i];
             $value = $dataValues[$i];
-    
+
             if (isset($bindingArray[$i])) {
                 $stmt->bindValue(':' . $bindingArray[$i], $value);
             }
         }
-    
+
         if ($stmt->execute()) {
             return true;
         } else {
@@ -258,7 +258,7 @@ class Database
             return false;
         }
     }
-    
+
 
     public function insertDataReturnId(PDO $pdo, string $tableName, array $columns, array $bindingArray, array $data)
     {
@@ -294,62 +294,62 @@ class Database
         $stmt->execute();
         return $pdo->lastInsertId();
     }
- 
+
     public function insertData(PDO $pdo, string $tableName, array $columns, array $bindingArray, array $data)
-{
-    // Debugging purposes
-    // var_dump($columns, $data);
+    {
+        // Debugging purposes
+        // var_dump($columns, $data);
 
-    if (count($columns) !== count($bindingArray)) {
-        throw new InvalidArgumentException("Number of columns and binding elements must match");
-    }
-
-    // Validate column sizes if necessary
-    foreach ($data as $key => $value) {
-        if ($key === 'content' && strlen($value) > 1000) { // Replace 1000 with the actual column size if different
-            throw new Exception("Content length exceeds allowed limit");
+        if (count($columns) !== count($bindingArray)) {
+            throw new InvalidArgumentException("Number of columns and binding elements must match");
         }
-    }
 
-    // Prepare the SQL statement
-    $columnNames = implode(', ', $columns);
-    $valuePlaceholders = ':' . implode(', :', $bindingArray);
-    $sql = "INSERT INTO $tableName ($columnNames) VALUES ($valuePlaceholders)";
+        // Validate column sizes if necessary
+        foreach ($data as $key => $value) {
+            if ($key === 'content' && strlen($value) > 1000) { // Replace 1000 with the actual column size if different
+                throw new Exception("Content length exceeds allowed limit");
+            }
+        }
 
-    $stmt = $pdo->prepare($sql);
+        // Prepare the SQL statement
+        $columnNames = implode(', ', $columns);
+        $valuePlaceholders = ':' . implode(', :', $bindingArray);
+        $sql = "INSERT INTO $tableName ($columnNames) VALUES ($valuePlaceholders)";
 
-    // Debugging SQL and placeholders
-    // echo "SQL: " . $sql . "\n";
-    // echo "Bindings:\n";
-    // var_dump($bindingArray);
+        $stmt = $pdo->prepare($sql);
 
-    $dataKeys = array_keys($data);
-    $dataValues = array_values($data);
+        // Debugging SQL and placeholders
+        // echo "SQL: " . $sql . "\n";
+        // echo "Bindings:\n";
+        // var_dump($bindingArray);
 
-    for ($i = 0; $i < count($dataKeys); $i++) {
-        $column = $dataKeys[$i];
-        $values = $dataValues[$i];
-        if (isset($bindingArray[$i])) {
-            // Bind the value using index position
-            $stmt->bindValue(':' . $bindingArray[$i], $values);
-            // Debug each binding
-            // echo "Binding :" . $bindingArray[$i] . " to value " . $values . "\n";
+        $dataKeys = array_keys($data);
+        $dataValues = array_values($data);
+
+        for ($i = 0; $i < count($dataKeys); $i++) {
+            $column = $dataKeys[$i];
+            $values = $dataValues[$i];
+            if (isset($bindingArray[$i])) {
+                // Bind the value using index position
+                $stmt->bindValue(':' . $bindingArray[$i], $values);
+                // Debug each binding
+                // echo "Binding :" . $bindingArray[$i] . " to value " . $values . "\n";
+            } else {
+                $stmt->bindValue(':' . $bindingArray[$i], $values);
+                // echo "Binding :" . $bindingArray[$i] . " to NULL\n";
+            }
+        }
+
+        if ($stmt->execute()) {
+            return true;
         } else {
-            $stmt->bindValue(':' . $bindingArray[$i], $values);
-            // echo "Binding :" . $bindingArray[$i] . " to NULL\n";
+            // Debugging error
+            echo json_encode($stmt->errorInfo());
+            return false;
         }
     }
 
-    if ($stmt->execute()) {
-        return true;
-    } else {
-        // Debugging error
-        echo json_encode($stmt->errorInfo());
-        return false;
-    }
-}
 
- 
     public function updateData(PDO $pdo, string $tableName, array $columns, array $data, string $whereColumn, $whereValue)
     {
         // var_dump(count($columns), count($data));
@@ -371,7 +371,7 @@ class Database
         try {
             $stmt = $pdo->prepare($sql);
             // var_dump($stmt);
-            for ($i = 0??1; $i < count($data); $i++) {
+            for ($i = 0 ?? 1; $i < count($data); $i++) {
                 $stmt->bindValue(':' . $bindingArray[$i], $data[$i]);
                 // var_dump(':' . $bindingArray[$i], $data[$i]);
             }
@@ -391,33 +391,33 @@ class Database
     {
         // var_dump(count($columns), count($data));
         // var_dump($columns, $data);
-    
+
         // Check if the number of columns and data elements match
         if (count($columns) !== count($data)) {
             throw new InvalidArgumentException("Number of columns and data elements must match");
         }
-    
+
         $setClause = '';
         foreach ($columns as $column) {
             $setClause .= "$column = :$column, ";
         }
         $setClause = rtrim($setClause, ', ');
-    
+
         $sql = "UPDATE $tableName SET $setClause WHERE $whereColumn = :whereValue";
-    
+
         try {
             $stmt = $pdo->prepare($sql);
             // var_dump($stmt);
-    
+
             foreach ($columns as $column) {
                 $stmt->bindValue(':' . $column, $data[$column]);
                 // var_dump(':' . $column, $data[$column]);
             }
-    
+
             $stmt->bindValue(':whereValue', trim($whereValue));
             // var_dump(':whereValue', $whereValue);
             // var_dump($sql);
-    
+
             $stmt->execute();
             return true;
         } catch (PDOException $e) {
@@ -432,7 +432,7 @@ class Database
                 $sql = "DELETE FROM $tableName WHERE $whereColumn = :whereValue";
                 $stmt = $pdo->prepare($sql);
                 $stmt->bindValue(':whereValue', $whereValue);
-    
+
                 if (!$stmt->execute()) {
                     return false; // Stop and return false if any delete operation fails
                 }
@@ -443,7 +443,7 @@ class Database
             return false;
         }
     }
-    
+
     public function deleteData(PDO $pdo, string $tableName, string $whereColumn, $whereValue)
     {
         $sql = "DELETE FROM $tableName WHERE $whereColumn = :whereValue";

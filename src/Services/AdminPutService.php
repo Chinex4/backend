@@ -32,6 +32,9 @@ class AdminPutService{
             case "updateUser": 
                 $this->put->updateUser( $data,  $accToken);
                 break;
+            case "updateWallet": 
+                $this->put->updateWallet( $data,  $accToken);
+                break;
         }
     }
 }
