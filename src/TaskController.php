@@ -11,7 +11,6 @@ class TaskController
     {
         $this->Database = new Database();
         $this->pdo = $this->Database->check_Database($_ENV['DB_NAME']);
-
         $this->gateways = [
             'user' => new UserGateway($this->pdo),
             'admin' => new AdminGateway($this->pdo)
@@ -19,7 +18,7 @@ class TaskController
     }
 
     public function processRequest(string $method, string $type, string $action, ?string $id): void
-    { 
+    {
         if (!isset($this->gateways[$type])) {
             http_response_code(404);
             echo json_encode(['error' => 'Invalid request type']);
@@ -92,11 +91,11 @@ class TaskController
             // if ($id) {
             //     $gateway->handleAdminFetch($action, $id);
             // } else {
-                $gateway->handleAdminFetchAll($action);
-                return;
+            $gateway->handleAdminFetchAll($action);
+            return;
             // }
         }
-         http_response_code(400);
+        http_response_code(400);
         echo json_encode(['error' => 'Invalid get type']);
     }
 
@@ -113,7 +112,7 @@ class TaskController
                 return;
             }
             if ($type === 'admin') {
-                        $rawInput = file_get_contents('php://input');
+                $rawInput = file_get_contents('php://input');
                 $jsonInput = json_decode($rawInput, true);
                 $data = !empty($jsonInput)
                     ? $jsonInput
@@ -123,13 +122,13 @@ class TaskController
             }
         }
         http_response_code(400);
-   echo json_encode(['error' => 'Invalid put type']);
+        echo json_encode(['error' => 'Invalid put type']);
     }
 
     private function handlePatch($gateway, $type, $action, $id): void
     {
-         
-       if ($id) {
+
+        if ($id) {
             if ($type === 'user') {
                 $rawInput = file_get_contents('php://input');
                 $jsonInput = json_decode($rawInput, true);
@@ -140,12 +139,31 @@ class TaskController
                 return;
             }
             if ($type === 'admin') {
-                        $rawInput = file_get_contents('php://input');
+                $rawInput = file_get_contents('php://input');
                 $jsonInput = json_decode($rawInput, true);
                 $data = !empty($jsonInput)
                     ? $jsonInput
                     : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), associative: true));
                 $gateway->handleAdminPatch($action, $data, $id);
+                return;
+            }
+        } else {
+            if ($type === 'user') {
+                $rawInput = file_get_contents('php://input');
+                $jsonInput = json_decode($rawInput, true);
+                $data = !empty($jsonInput)
+                    ? $jsonInput
+                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
+                $gateway->handlePatch($action, $data);
+                return;
+            }
+            if ($type === 'admin') {
+                $rawInput = file_get_contents('php://input');
+                $jsonInput = json_decode($rawInput, true);
+                $data = !empty($jsonInput)
+                    ? $jsonInput
+                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), associative: true));
+                $gateway->handleAdminPatch($action, $data);
                 return;
             }
         }
@@ -155,20 +173,20 @@ class TaskController
 
     private function handleDelete($gateway, $type, $action, $id): void
     {
-       if ($type === 'admin') {
+        if ($type === 'admin') {
             if ($id) {
                 $gateway->handleAdminDelete($action, $id);
-            }  
+            }
             return;
         }
-       if ($type === 'user') {
+        if ($type === 'user') {
             if ($id) {
                 $gateway->handleUserDelete($action, $id);
-            }  
+            }
             return;
         }
 
-     http_response_code(400);
-     echo json_encode(['error' => 'Invalid delete type']);
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid delete type']);
     }
 }

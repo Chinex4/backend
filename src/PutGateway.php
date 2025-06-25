@@ -51,11 +51,9 @@ class PutGateway
     }
     public function updateWallet(array $data, string $accToken)
     {
- 
-
-        // Handle nested networks array → flatten into JSON fields
-        if (isset($data['networks']) && is_array($data['networks'])) {
-            $networks = $data['networks'];
+        // Handle nested network array → flatten into JSON fields
+        if (isset($data['network']) && is_array($data['network'])) {
+            $networks = $data['network'];
 
             $networkNames = [];
             $depositAddresses = [];
@@ -69,39 +67,31 @@ class PutGateway
                 $confirmations[] = $net['confirmations_required'];
             }
 
-            // Encode as JSON for MySQL JSON columns with CHECK constraint
-            $data['network'] = json_encode($networkNames);
-            $data['deposit_address'] = json_encode($depositAddresses);
-            $data['min_deposit'] = json_encode($minDeposits);
-            $data['confirmations_required'] = json_encode($confirmations);
-
-            unset($data['networks']);  
+            $data['network'] = json_encode($networkNames, JSON_UNESCAPED_UNICODE);
+            $data['deposit_address'] = json_encode($depositAddresses, JSON_UNESCAPED_UNICODE);
+            $data['min_deposit'] = json_encode($minDeposits, JSON_UNESCAPED_UNICODE);
+            $data['confirmations_required'] = json_encode($confirmations, JSON_UNESCAPED_UNICODE);
         }
 
-        // Remove unused token before DB update
+        // Remove token
         unset($data['accToken']);
 
-        // Prepare keys and update
         $keys = array_keys($data);
 
         $updated = $this->connectToDataBase->updateDataWithArrayKey(
             $this->dbConnection,
-            wallet,  
+            wallet,
             $keys,
             $data,
             'id',
             $accToken
         );
 
-        // Send response
         if ($updated) {
             $this->response->created("User details updated successfully.");
         } else {
             $this->response->unprocessableEntity('Error updating user details.');
         }
-
-
-
     }
 
 

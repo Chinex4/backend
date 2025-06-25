@@ -40,9 +40,9 @@ class UserGateway
     {
         $this->put->handlePut($action);
     }
-    public function handlePatch(string $action): void
+    public function handlePatch(string $action, array $data): void
     {
-        $this->patch->handlePatch($action);
+        $this->patch->handlePatch($action, $data);
     }
     public function handleDelete(string $action): void
     {

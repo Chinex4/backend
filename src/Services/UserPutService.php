@@ -10,15 +10,11 @@ class UserPutService{
     private $gateway;
     private $columns;
     private $userDataGenerator;
-    private $fetch;
+    private $put;
     public function __construct($pdoConnection)
     {
         $this->pdovar = $pdoConnection; 
-        $this->fetch = new FetchGateway($this->pdovar);
-        // $this->mailsender = new EmailSender();
-        // $this->response = new JsonResponse();
-        // $this->conn = new Database();
-        // $this->createDbTables = new CreateDbTables($this->pdovar);
+        $this->put = new PutGateway($this->pdovar); 
     }
 
     public function __destruct()
@@ -26,11 +22,11 @@ class UserPutService{
         $this->pdovar = null;
     }
 
-    public function handlePut(string $action): void
+    public function handleput(string $action): void
     {
         switch ($action) {
-            case "fetchUser": 
-                $this->fetch->fetchUserWithToken();
+            case "updateNickname":
+                // $this->put->updateNickname();
                 break;
         }
     }

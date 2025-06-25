@@ -10,15 +10,11 @@ class UserPatchService{
     private $gateway;
     private $columns;
     private $userDataGenerator;
-    private $fetch;
+    private $patch;
     public function __construct($pdoConnection)
     {
         $this->pdovar = $pdoConnection; 
-        $this->fetch = new FetchGateway($this->pdovar);
-        // $this->mailsender = new EmailSender();
-        // $this->response = new JsonResponse();
-        // $this->conn = new Database();
-        // $this->createDbTables = new CreateDbTables($this->pdovar);
+        $this->patch = new PatchGateway($this->pdovar); 
     }
 
     public function __destruct()
@@ -26,11 +22,11 @@ class UserPatchService{
         $this->pdovar = null;
     }
 
-    public function handlePatch(string $action): void
+    public function handlePatch(string $action, array $data): void
     {
         switch ($action) {
-            case "fetchUser": 
-                $this->fetch->fetchUserWithToken();
+            case "updateNickname":
+                $this->patch->updateNickname($data);
                 break;
         }
     }

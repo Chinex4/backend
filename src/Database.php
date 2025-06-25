@@ -387,6 +387,50 @@ class Database
             return false;
         }
     }
+    public function updateJsonSafeData(PDO $pdo, string $tableName, array $columns, array $data, string $whereColumn, $whereValue)
+{
+    // Check if the number of columns and data elements match
+    if (count($columns) !== count($data)) {
+        throw new InvalidArgumentException("Number of columns and data elements must match");
+    }
+
+    // Preprocess: Convert array/object values to JSON
+    $processedData = [];
+    foreach ($columns as $column) {
+        $value = $data[$column];
+        if (is_array($value) || is_object($value)) {
+            $value = json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+        $processedData[$column] = $value;
+    }
+
+    // Prepare SET clause
+    $setClause = '';
+    foreach ($columns as $column) {
+        $setClause .= "$column = :$column, ";
+    }
+    $setClause = rtrim($setClause, ', ');
+
+    // Final SQL
+    $sql = "UPDATE $tableName SET $setClause WHERE $whereColumn = :whereValue";
+
+    try {
+        $stmt = $pdo->prepare($sql);
+
+        // Bind processed values
+        foreach ($columns as $column) {
+            $stmt->bindValue(':' . $column, $processedData[$column]);
+        }
+
+        $stmt->bindValue(':whereValue', trim($whereValue));
+        $stmt->execute();
+        return true;
+    } catch (PDOException $e) {
+        echo "Error: " . $e->getMessage();
+        return false;
+    }
+}
+
     public function updateDataWithArrayKey(PDO $pdo, string $tableName, array $columns, array $data, string $whereColumn, $whereValue)
     {
         // var_dump(count($columns), count($data));

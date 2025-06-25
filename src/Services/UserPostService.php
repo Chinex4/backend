@@ -1,5 +1,5 @@
 <?php 
-require_once __DIR__ . '/AuthUserService.php';
+require_once __DIR__ . '/AuthUserService.php'; 
 
 class UserPostService{
     private $pdovar;
@@ -9,7 +9,7 @@ class UserPostService{
     public function __construct($pdoConnection)
     {
         $this->pdovar = $pdoConnection; 
-        $this->authService = new AuthUserService($this->pdovar);
+        $this->authService = new AuthUserService($this->pdovar); 
         $this->columns = require __DIR__ . '/../Config/UserColumns.php'; 
     }
 
@@ -51,6 +51,7 @@ class UserPostService{
             case "insert-coins":
                 $this->authService->insertcoins($data);
                 break;
+        
         }
     }
 }

@@ -196,8 +196,8 @@ class AuthUserService
                     $updateUserStatus = $this->connectToDataBase->updateData(
                         $this->dbConnection,
                         RegTable,
-                        ['emailVerication'],
-                        ['Verified'],
+                        ['emailVerication', 'refreshToken'],
+                        ['Verified', 'true'],
                         'id',
                         $fetchUserDetailsWithEmail['id']
                     );
@@ -329,18 +329,21 @@ class AuthUserService
                 $updateUserStatus = $this->connectToDataBase->updateData(
                     $this->dbConnection,
                     RegTable,
-                    ['UserLogin'],
-                    ['True'],
+                    ['UserLogin','refreshToken'],
+                    ['True','false'],
                     'id',
                     $userId
                 );
     
                 if ($updateUserStatus) {
-                    $_SESSION['UID'] = $userId;
-    
-                    return $this->response->created([
-                        "accessToken" => $accessToken
-                    ]);
+                    $fetchUserDetailsWithEmail = $this->gateway->fetchData(RegTable, $conditionsForFetch);
+                    if ($fetchUserDetailsWithEmail) {
+                        return $this->response->created([
+                            "accessToken" => $accessToken,
+                            "allowOtp" => $fetchUserDetailsWithEmail['allowOtp'],
+                            "confirmOtp"=> $fetchUserDetailsWithEmail['refreshToken']
+                        ]);
+                    }
                 } else {
                     return $this->response->unprocessableEntity(['Unable to update login status']);
                 }

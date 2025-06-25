@@ -41,24 +41,24 @@ class PatchGateway
     {
         $createColumn = $this->createDbTables->createTable(RegTable, ['allowOtp']);
         if ($createColumn) {
-        $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['allowOtp'], ['true'], 'accToken', $accToken);
-        if ($updated) {
-            $this->response->created("OTP login has been enabled for this user.");
-        } else {
-            $this->response->unprocessableEntity('error disabling user login');
-        }
+            $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['allowOtp'], ['true'], 'accToken', $accToken);
+            if ($updated) {
+                $this->response->created("OTP login has been enabled for this user.");
+            } else {
+                $this->response->unprocessableEntity('error disabling user login');
+            }
         }
     }
     public function disableOtp(string $accToken)
     {
         $createColumn = $this->createDbTables->createTable(RegTable, ['allowOtp']);
         if ($createColumn) {
-        $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['allowOtp'], ['false'], 'accToken', $accToken);
-        if ($updated) {
-            $this->response->created("OTP login has been disabled for this user.");
-        } else {
-            $this->response->unprocessableEntity('error disabling user login');
-        }
+            $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['allowOtp'], ['false'], 'accToken', $accToken);
+            if ($updated) {
+                $this->response->created("OTP login has been disabled for this user.");
+            } else {
+                $this->response->unprocessableEntity('error disabling user login');
+            }
         }
     }
     public function disableLogin(string $accToken)
@@ -78,7 +78,7 @@ class PatchGateway
         // $createColumn = $this->createDbTables->createTable(RegTable, ['chinex']);
         // if ($createColumn) {
         $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['allowMessage'], ['false'], 'accToken', $accToken);
-    
+
         if ($updated) {
             $this->response->created("Alert messages disabled successfully for this user.");
         } else {
@@ -86,19 +86,17 @@ class PatchGateway
         }
         // }
     }
-    
+
     public function enableAlert(string $accToken)
-{
-    $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['allowMessage'], ['true'], 'accToken', $accToken);
+    {
+        $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['allowMessage'], ['true'], 'accToken', $accToken);
 
-    if ($updated) {
-        $this->response->created("Alert messages enabled successfully for this user.");
-    } else {
-        $this->response->unprocessableEntity("Error enabling alert messages for this user.");
+        if ($updated) {
+            $this->response->created("Alert messages enabled successfully for this user.");
+        } else {
+            $this->response->unprocessableEntity("Error enabling alert messages for this user.");
+        }
     }
-}
- 
-
     public function enableLogin(string $accToken)
     {
         $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AllowLogin'], ['true'], 'accToken', $accToken);
@@ -107,6 +105,39 @@ class PatchGateway
         } else {
             $this->response->unprocessableEntity('error disabling user login');
         }
+    }
+    public function updateNickname(array $data)
+    {
+        
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+        $token = $matches[1]; 
+        try {
+            $decodedPayload = $this->jwtCodec->decode($token);
+            $userid =  $decodedPayload['sub'];
+            $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['username'], [$data['nickname']], 'id', $userid);
+            if ($updated) {
+                $this->response->created("Username updated successfully");
+            } else {
+                $this->response->unprocessableEntity('Failed to update username. Please try again.');
+            }
+            // return $this->response->success(['userDetails' => $user]);
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+        }
+
+
+      
     }
 
 
