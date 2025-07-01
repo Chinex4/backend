@@ -465,64 +465,49 @@ class TaskGatewayFunction
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return $data;
     }
+public function processImageWithgivenNameFiles($file)
+{
+    $errors = [];
 
-    public function processImageWithgivenNameFiles($file)
-    {
-        $imgHolder = '';
-        $errors = [];
+    $fileDoc = $file;
 
-        $fileDoc = $file;
-        if (isset($fileDoc['name']) && is_string($fileDoc['name'])) {
-            $fileName = $fileDoc['name'];
-            $fileType = $fileDoc['type'];
-            $fileError = $fileDoc['error'];
-            $fileSize = $fileDoc['size'];
-            $tmp_name = $fileDoc['tmp_name'];
-            $currentFile = array(
-                'name' => $fileName,
-                'type' => $fileType,
-                'tmp_name' => $tmp_name,
-                'error' => $fileError,
-                'size' => $fileSize
-            );
+    if (isset($fileDoc['name']) && is_string($fileDoc['name'])) {
+        $currentFile = [
+            'name'     => $fileDoc['name'],
+            'type'     => $fileDoc['type'],
+            'tmp_name' => $fileDoc['tmp_name'],
+            'error'    => $fileDoc['error'],
+            'size'     => $fileDoc['size'],
+        ];
 
-            $result = $this->validateImageFile($currentFile);
+        $result = $this->validateImageFile($currentFile);
 
+        if (is_string($result)) {
+            return $result;  
+        }
 
-            if (is_string($result)) {
-                $imgHolder = $result;
-            } elseif (is_array($result)) {
-                switch ($result[0]) {
-                    case 1:
-                        $this->response->unprocessableEntity("You can only upload a PNG, JPG, or JPEG file.");
-                        break;
-                    case 2:
-                        $this->response->unprocessableEntity("There was an error while uploading this file. Please try again.");
-                        break;
-                    case 3:
-                        $this->response->unprocessableEntity("Your file is too big. Please upload a file smaller than 5MB.");
-                        break;
-                    case 4:
-                        $this->response->unprocessableEntity("Failed to create upload directory.");
-                        break;
-                    case 5:
-                        $this->response->unprocessableEntity("Could not move the file to the destination directory.");
-                        break;
-                }
-            }
-            return $imgHolder;
-
-
-        } else {
-            $error = ['this file is not an array'];
-            if (!empty($errors)) {
-                $this->response->unprocessableEntity($error);
-                return;
+        if (is_array($result)) {
+            switch ($result[0]) {
+                case 1:
+                    return $this->response->unprocessableEntity("You can only upload a PNG, JPG, or JPEG file.");
+                case 2:
+                    return $this->response->unprocessableEntity("There was an error while uploading this file. Please try again.");
+                case 3:
+                    return $this->response->unprocessableEntity("Your file is too big. Please upload a file smaller than 5MB.");
+                case 4:
+                    return $this->response->unprocessableEntity("Failed to create upload directory.");
+                case 5:
+                    return $this->response->unprocessableEntity("Could not move the file to the destination directory.");
+                default:
+                    return $this->response->unprocessableEntity("Unknown error occurred.");
             }
         }
 
-
+    } else {
+        return $this->response->unprocessableEntity("Invalid file input.");
     }
+}
+
 
     public function processImageFiles($file)
     {
@@ -552,29 +537,25 @@ class TaskGatewayFunction
                         $imgHolder = $result;
                     } elseif (is_array($result)) {
                         switch ($result[0]) {
-                            case 1:
-                                $errors[] = "You can only upload a PNG, JPG, or JPEG file.";
-                                break;
-                            case 2:
-                                $errors[] = "There was an error while uploading this file. Please try again.";
-                                break;
-                            case 3:
-                                $errors[] = "Your file is too big. Please upload a file smaller than 5MB.";
-                                break;
-                            case 4:
-                                $errors[] = "Failed to create upload directory.";
-                                break;
-                            case 5:
-                                $errors[] = "Could not move the file to the destination directory.";
-                                break;
+                             case 1:
+                        $this->response->unprocessableEntity("You can only upload a PNG, JPG, or JPEG file.");
+                        break;
+                    case 2:
+                        $this->response->unprocessableEntity("There was an error while uploading this file. Please try again.");
+                        break;
+                    case 3:
+                        $this->response->unprocessableEntity("Your file is too big. Please upload a file smaller than 5MB.");
+                        break;
+                    case 4:
+                        $this->response->unprocessableEntity("Failed to create upload directory.");
+                        break;
+                    case 5:
+                        $this->response->unprocessableEntity("Could not move the file to the destination directory.");
+                        break;
                         }
                     }
                 }
-
-                if (!empty($errors)) {
-                    $this->response->unprocessableEntity($errors);
-                    return null;
-                }
+ 
 
                 return $imgHolder;
             }
