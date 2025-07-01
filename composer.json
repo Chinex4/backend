@@ -6,6 +6,7 @@
     },
     "require": {
         "vlucas/phpdotenv": "^5.3",
-        "symfony/mailer": "^7.3"
+        "symfony/mailer": "^7.3",
+        "robthree/twofactorauth": "^3.0"
     }
 }
