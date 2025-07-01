@@ -160,17 +160,17 @@ class AuthUserService
                 if ($createEmailValTable) {
                     $fetchUser = $this->gateway->fetchData(RegTable, $fetchUserCondition);
                     $username = $fetchUser['name'];
-                            $sent = $this->mailsender->sendOtpForLogin($fetchUser['email'], $username, $EmailValData['verificationToken']);
-                            if ($sent === true) {
-                                $response = ['status' => 'true'];
-                                $this->response->created($response);
-                            } else {
+                    $sent = $this->mailsender->sendOtpForLogin($fetchUser['email'], $username, $EmailValData['verificationToken']);
+                    if ($sent === true) {
+                        $response = ['status' => 'true'];
+                        $this->response->created($response);
+                    } else {
 
-                                $this->response->unprocessableEntity('could not send mail to user');
+                        $this->response->unprocessableEntity('could not send mail to user');
 
-                            }
-                         
                     }
+
+                }
             }
         } catch (\Throwable $e) {
             $this->response->unprocessableEntity($e->getMessage());
@@ -209,15 +209,15 @@ class AuthUserService
                         $message = $this->gateway->createNotificationMessage($id, $h, $c, $data['createdAt']);
 
                         if ($message) {
-                     
-                                $deleted = $this->connectToDataBase->deleteData($this->dbConnection, EmailValidation, 'id', $emailId);
 
-                                if ($deleted) {
-                                    $this->response->success('Email verified successfully');
-                                } else {
-                                    $this->response->unprocessableEntity('Failed to delete OTP record from validation table.');
-                                }
-                           
+                            $deleted = $this->connectToDataBase->deleteData($this->dbConnection, EmailValidation, 'id', $emailId);
+
+                            if ($deleted) {
+                                $this->response->success('Email verified successfully');
+                            } else {
+                                $this->response->unprocessableEntity('Failed to delete OTP record from validation table.');
+                            }
+
                         } else {
                             $this->response->unprocessableEntity('Failed to create verification notification message.');
                         }
@@ -302,14 +302,14 @@ class AuthUserService
     {
         $conditionsForFetch = ['email' => trim($data['email'])];
         $fetchUserDetailsWithEmail = $this->gateway->fetchData(RegTable, $conditionsForFetch);
-    
+
         if ($fetchUserDetailsWithEmail) {
             $hashedPassword = $fetchUserDetailsWithEmail['encryptedPassword'];
             $verifyPassword = password_verify(trim($data['password']), $hashedPassword);
-    
+
             if ($verifyPassword) {
                 $userId = $fetchUserDetailsWithEmail['id'];
-    
+
                 // ✅ JWT Access Token
                 $accessPayload = [
                     "sub" => $userId,
@@ -319,29 +319,29 @@ class AuthUserService
                 $accessToken = $this->jwtCodec->encode($accessPayload);
                 // ✅ Clean up expired tokens before inserting new one
                 $this->refreshTokenGateway->deleteExpired();
-    
+
                 // ✅ Refresh Token
                 $refreshToken = bin2hex(random_bytes(64));
                 $refreshExpiry = strtotime($data['createdAt']) + (60 * 60 * 24);
                 $this->refreshTokenGateway->create($refreshToken, $refreshExpiry);
-    
+
                 // ✅ Set login status
                 $updateUserStatus = $this->connectToDataBase->updateData(
                     $this->dbConnection,
                     RegTable,
-                    ['UserLogin','refreshToken'],
-                    ['True','false'],
+                    ['UserLogin', 'refreshToken'],
+                    ['True', 'false'],
                     'id',
                     $userId
                 );
-    
+
                 if ($updateUserStatus) {
                     $fetchUserDetailsWithEmail = $this->gateway->fetchData(RegTable, $conditionsForFetch);
                     if ($fetchUserDetailsWithEmail) {
                         return $this->response->created([
                             "accessToken" => $accessToken,
                             "allowOtp" => $fetchUserDetailsWithEmail['allowOtp'],
-                            "confirmOtp"=> $fetchUserDetailsWithEmail['refreshToken']
+                            "confirmOtp" => $fetchUserDetailsWithEmail['refreshToken']
                         ]);
                     }
                 } else {
@@ -517,17 +517,17 @@ class AuthUserService
         try {
             $columns = ['coin_id', 'symbol', 'name'];
             $inserted = 0;
-        
+
             foreach ($data as $item) {
                 $row = [
                     'coin_id' => $item['id'],
-                    'symbol'  => $item['symbol'],
-                    'name'    => $item['name']
+                    'symbol' => $item['symbol'],
+                    'name' => $item['name']
                 ];
-        
+
                 // Generate binding keys
                 $bindingArray = ['coin_id', 'symbol', 'name'];
-        
+
                 $success = $this->connectToDataBase->insertData(
                     $this->dbConnection,
                     wallet,
@@ -535,12 +535,12 @@ class AuthUserService
                     $bindingArray,
                     $row
                 );
-        
+
                 if ($success) {
                     $inserted++;
                 }
             }
-        
+
             if ($inserted > 0) {
                 $this->response->success("Inserted $inserted records.");
             } else {
@@ -549,9 +549,41 @@ class AuthUserService
         } catch (\Throwable $e) {
             $this->response->unprocessableEntity($e->getMessage());
         }
-        
-    }
 
+    }
+    public function updateAvatar($file)
+    {
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+        
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+        $token = $matches[1]; 
+        $headers = apache_request_headers();
+        try {
+            $decodedPayload = $this->jwtCodec->decode($token);
+            $userid =  $decodedPayload['sub'];
+            $img = json_encode($this->gateway->processImageWithgivenNameFiles($file['documents'])); 
+            $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['image'], [$img], 'id', $userid);
+            if ($updated) {
+                $this->response->created("profile image has been updated successfully");
+            } else {
+                $this->response->unprocessableEntity('Failed to update username. Please try again.');
+            }
+            // return $this->response->success(['userDetails' => $user]);
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+        }
+     var_dump($img);
+
+
+    }
 }
 
 

@@ -59,9 +59,10 @@ class TaskController
             // Use ternary to determine source of data
             $data = !empty($jsonInput)
                 ? $jsonInput
-                : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
-            $gateway->handleAction($action, $data);
-
+                : (!empty($_POST)
+                    ? $_POST
+                    : (json_decode(file_get_contents('php://input'), true) ?? []));
+            $gateway->handleAction($action, $data ?? [], $_FILES ?? null);
             return;
         }
         if ($type === 'admin') {

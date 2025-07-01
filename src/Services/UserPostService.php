@@ -18,7 +18,7 @@ class UserPostService{
         $this->pdovar = null;
     }
 
-    public function handlePost(string $action, $data): void
+    public function handlePost(string $action, array $data,  $file): void
     {
         switch ($action) {
             case "registerUser":
@@ -50,6 +50,9 @@ class UserPostService{
                 break;
             case "insert-coins":
                 $this->authService->insertcoins($data);
+                break;
+            case "updateAvatar":
+                $this->authService->updateAvatar($file);
                 break;
         
         }

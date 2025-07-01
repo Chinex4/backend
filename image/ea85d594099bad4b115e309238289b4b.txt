@@ -1,0 +1,15 @@
+ link -> https://fin.galanbank.com/
+ admin -> https://fin.galanbank.com/admin_panel
+ Details 
+ admin Mail -> admin_only_user
+ admin Password -> password_admin
+
+
+  support mail 
+  supportMAil -> support@fin.galanbank.com
+  supportPassword -> $v=MZ#g{])bP
+  imap&stmp mail.fin.galanbank.com
+
+
+
+

@@ -494,34 +494,29 @@ class TaskGatewayFunction
             } elseif (is_array($result)) {
                 switch ($result[0]) {
                     case 1:
-                        $errors[] = "You can only upload a PNG, JPG, or JPEG file.";
+                        $this->response->unprocessableEntity("You can only upload a PNG, JPG, or JPEG file.");
                         break;
                     case 2:
-                        $errors[] = "There was an error while uploading this file. Please try again.";
+                        $this->response->unprocessableEntity("There was an error while uploading this file. Please try again.");
                         break;
                     case 3:
-                        $errors[] = "Your file is too big. Please upload a file smaller than 5MB.";
+                        $this->response->unprocessableEntity("Your file is too big. Please upload a file smaller than 5MB.");
                         break;
                     case 4:
-                        $errors[] = "Failed to create upload directory.";
+                        $this->response->unprocessableEntity("Failed to create upload directory.");
                         break;
                     case 5:
-                        $errors[] = "Could not move the file to the destination directory.";
+                        $this->response->unprocessableEntity("Could not move the file to the destination directory.");
                         break;
                 }
             }
-
-
-            if (!empty($errors)) {
-                $this->response->unprocessableEntity($errors);
-                return;
-            }
             return $imgHolder;
+
 
         } else {
             $error = ['this file is not an array'];
             if (!empty($errors)) {
-                $this->response->unprocessableEntity($errors);
+                $this->response->unprocessableEntity($error);
                 return;
             }
         }
@@ -578,14 +573,16 @@ class TaskGatewayFunction
 
                 if (!empty($errors)) {
                     $this->response->unprocessableEntity($errors);
-                    return;
+                    return null;
                 }
+
                 return $imgHolder;
             }
         }
 
-
+        return null;
     }
+
     public function getCurrentUrl()
     {
         // Determine the protocol
@@ -625,7 +622,7 @@ class TaskGatewayFunction
             $errors[] = 3;
         }
 
-        $uploadDirectory = '../img/';
+        $uploadDirectory = '../image/';
 
         if (!file_exists($uploadDirectory)) {
             if (!mkdir($uploadDirectory, 0777, true)) {
@@ -641,7 +638,7 @@ class TaskGatewayFunction
         if (!empty($errors)) {
             return $errors;
         } else {
-            return apiLink . 'img/' . $newFileName;
+            return apiLink . 'image/' . $newFileName;
         }
     }
     public function checkForEmailVerification($second)

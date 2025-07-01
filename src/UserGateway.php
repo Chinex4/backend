@@ -27,10 +27,9 @@ class UserGateway
         $this->pdovar = null;
     }
 
-    public function handleAction(string $action, array $data): void
+    public function handleAction($action, array $data = [], $file = null)
     {
-        $this->post->handlePost($action, $data);
-
+        $this->post->handlePost($action, $data, $file);
     }
     public function handleFetch(string $action): void
     {
