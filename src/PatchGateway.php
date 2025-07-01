@@ -139,6 +139,39 @@ class PatchGateway
 
       
     }
+    public function updateLanguage(array $data)
+    {
+        
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+        $token = $matches[1]; 
+        try {
+            $decodedPayload = $this->jwtCodec->decode($token);
+            $userid =  $decodedPayload['sub'];
+            $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['language'], [$data['language']], 'id', $userid);
+            if ($updated) {
+                $this->response->created("Username updated successfully");
+            } else {
+                $this->response->unprocessableEntity('Failed to update username. Please try again.');
+            }
+            // return $this->response->success(['userDetails' => $user]);
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+        }
+
+
+      
+    }
 
 
 }

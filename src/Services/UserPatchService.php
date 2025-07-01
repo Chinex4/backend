@@ -28,6 +28,9 @@ class UserPatchService{
             case "updateNickname":
                 $this->patch->updateNickname($data);
                 break;
+            case "updateLanguage":
+                $this->patch->updateLanguage($data);
+                break;
         }
     }
 }
