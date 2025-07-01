@@ -551,39 +551,61 @@ class AuthUserService
         }
 
     }
-    public function updateAvatar($file)
-    {
-        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
-        
-        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-            return $this->response->unauthorized("Authorization header missing or invalid");
-        }
-        $token = $matches[1]; 
-        $headers = apache_request_headers();
-        try {
-            $decodedPayload = $this->jwtCodec->decode($token);
-            $userid =  $decodedPayload['sub'];
-            $img = json_encode($this->gateway->processImageWithgivenNameFiles($file['documents'])); 
-            $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['image'], [$img], 'id', $userid);
-            if ($updated) {
-                $this->response->created("profile image has been updated successfully");
-            } else {
-                $this->response->unprocessableEntity('Failed to update username. Please try again.');
-            }
-            // return $this->response->success(['userDetails' => $user]);
-        } catch (InvalidArgumentException $e) {
-            return $this->response->unauthorized("Invalid token format.");
-        } catch (InvalidSignatureException $e) {
-            return $this->response->unauthorized("Invalid token signature.");
-        } catch (TokenExpiredException $e) {
-            return $this->response->unauthorized("Token has expired.");
-        } catch (Exception $e) {
-            return $this->response->unauthorized("Token decode error: " . $e->getMessage());
-        }
-     var_dump($img);
+  public function updateAvatar($file)
+{
+    $headers = apache_request_headers();
+    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
 
-
+    if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+        return $this->response->unauthorized("Authorization header missing or invalid");
     }
+
+    $token = $matches[1];
+
+    try {
+        // Decode JWT token
+        $decodedPayload = $this->jwtCodec->decode($token);
+        $userid = $decodedPayload['sub'];
+
+        // Validate and upload image
+        $imgResult = $this->gateway->processImageWithgivenNameFiles($file['documents']);
+
+        if (is_array($imgResult)) {
+            // Error handled already inside `processImageWithgivenNameFiles`
+            return; // prevent continuing execution
+        }
+
+        if (!is_string($imgResult) || empty($imgResult)) {
+            return ;
+        }
+
+        // Store image path in DB
+        $updated = $this->connectToDataBase->updateData(
+            $this->dbConnection,
+            RegTable,
+            ['image'],
+            [json_encode($imgResult)],
+            'id',
+            $userid
+        );
+
+        if ($updated) {
+            return $this->response->created("Profile image has been updated successfully.");
+        } else {
+            return $this->response->unprocessableEntity("Failed to update profile image. Please try again.");
+        }
+
+    } catch (InvalidArgumentException $e) {
+        return $this->response->unauthorized("Invalid token format.");
+    } catch (InvalidSignatureException $e) {
+        return $this->response->unauthorized("Invalid token signature.");
+    } catch (TokenExpiredException $e) {
+        return $this->response->unauthorized("Token has expired.");
+    } catch (Exception $e) {
+        return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+    }
+}
+
 }
 
 
