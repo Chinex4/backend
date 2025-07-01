@@ -1,4 +1,5 @@
 <?php
+DEFINE('ipAddress', 'http://192.168.8.189/');
 DEFINE('RegTable', 'registertable');
 DEFINE('admintable', 'admintable');
 DEFINE('EmailValidation', 'emailvalidation');
@@ -30,12 +31,12 @@ DEFINE('requestCopyTrade', 'requestCopyTrade');
 DEFINE('makestake', 'makestake');
 DEFINE('refresh_token', 'refresh_token');
 DEFINE('trans', 'transaction');  
-DEFINE('sitelink', 'http://192.168.8.184:5173/'); 
-DEFINE('apiLink', 'http://192.168.8.184/cashtradeproApi/'); 
-DEFINE('appLink', 'http://192.168.8.184:5173/'); 
+DEFINE('sitelink', ipAddress.':5173/'); 
+DEFINE('apiLink', ipAddress.'cashtradeproApi/'); 
+DEFINE('appLink', ipAddress.':5173/'); 
 DEFINE('siteaddress', '7JR7+F94, George Town, Cayman Islands');
 DEFINE('sitenumber', '1(652)59444448');
 DEFINE('sitename', 'Cash Trade Pro');
 DEFINE('sitemail', 'support@cashtradepro.com');
 define('SMTP_DSN', 'smtp://mailing@cashtradepro.com:8&hf6%C]_ER{@c8.my-control-panel.com:465');
-define('emailLogo', 'http://192.168.8.184/cashtradeproApi/image/logo.png');
+define('emailLogo', ipAddress.'cashtradeproApi/image/logo.png');
