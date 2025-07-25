@@ -20,6 +20,7 @@ class UserPostService{
 
     public function handlePost(string $action, array $data,  $file): void
     {
+         
         switch ($action) {
             case "registerUser":
                 $this->authService->registerUser($data);
@@ -53,6 +54,9 @@ class UserPostService{
                 break;
             case "updateAvatar":
                 $this->authService->updateAvatar($file);
+                break;
+            case "verify2fa":
+                $this->authService->verify2fa($data);
                 break;
         
         }

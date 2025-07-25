@@ -7,6 +7,12 @@
     "require": {
         "vlucas/phpdotenv": "^5.3",
         "symfony/mailer": "^7.3",
-        "robthree/twofactorauth": "^3.0"
+        "robthree/twofactorauth": "^3.0",
+        "endroid/qr-code": "^6.0",
+        "bacon/bacon-qr-code": "^3.0",
+        "spomky-labs/otphp": "^11.3",
+        "psr/clock": "^1.0",
+        "symfony/clock": "^7.3",
+        "christian-riesen/base32": "^1.6"
     }
 }

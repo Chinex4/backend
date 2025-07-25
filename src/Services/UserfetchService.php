@@ -32,6 +32,9 @@ class UserfetchService{
             case "fetchUser": 
                 $this->fetch->fetchUserWithToken();
                 break;
+            case "generate2fa": 
+                $this->fetch->generate2Fa();
+                break;
         }
     }
 }

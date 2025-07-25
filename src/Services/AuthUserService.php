@@ -551,61 +551,111 @@ class AuthUserService
         }
 
     }
-  public function updateAvatar($file)
-{
-    $headers = apache_request_headers();
-    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+    public function updateAvatar($file)
+    {
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
 
-    if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-        return $this->response->unauthorized("Authorization header missing or invalid");
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+
+        $token = $matches[1];
+
+        try {
+            // Decode JWT token
+            $decodedPayload = $this->jwtCodec->decode($token);
+            $userid = $decodedPayload['sub'];
+
+            // Validate and upload image
+            $imgResult = $this->gateway->processImageWithgivenNameFiles($file['documents']);
+
+            if (is_array($imgResult)) {
+                // Error handled already inside `processImageWithgivenNameFiles`
+                return; // prevent continuing execution
+            }
+
+            if (!is_string($imgResult) || empty($imgResult)) {
+                return;
+            }
+
+            // Store image path in DB
+            $updated = $this->connectToDataBase->updateData(
+                $this->dbConnection,
+                RegTable,
+                ['image'],
+                [json_encode($imgResult)],
+                'id',
+                $userid
+            );
+
+            if ($updated) {
+                return $this->response->created("Profile image has been updated successfully.");
+            } else {
+                return $this->response->unprocessableEntity("Failed to update profile image. Please try again.");
+            }
+
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+        }
     }
 
-    $token = $matches[1];
-
-    try {
-        // Decode JWT token
-        $decodedPayload = $this->jwtCodec->decode($token);
-        $userid = $decodedPayload['sub'];
-
-        // Validate and upload image
-        $imgResult = $this->gateway->processImageWithgivenNameFiles($file['documents']);
-
-        if (is_array($imgResult)) {
-            // Error handled already inside `processImageWithgivenNameFiles`
-            return; // prevent continuing execution
+    public function verify2fa($data)
+    {
+       
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
         }
+        $token = $matches[1];
 
-        if (!is_string($imgResult) || empty($imgResult)) {
-            return ;
+        try {
+            $decodedPayload = $this->jwtCodec->decode($token);
+            $userId = $decodedPayload['sub']; 
+            $userCode = $data['token'] ?? null;
+            if (!$userCode) {
+                return $this->response->unprocessableEntity("Verification code required.");
+            }
+
+            $user = $this->gateway->fetchData(RegTable, ['id' => $userId]);
+            if (!$user || !isset($user['totp_secret'])) {
+                return $this->response->unprocessableEntity("User not found or 2FA not initialized.");
+            }
+
+
+            $secret = $user['totp_secret'];
+
+            // Create TOTP instance
+            $clock = new \Symfony\Component\Clock\NativeClock();
+            $totp = \OTPHP\TOTP::create(
+                secret: $secret,
+                period: 30,
+                digest: 'sha1',
+                digits: 6,
+                epoch: OTPHP\TOTP::DEFAULT_EPOCH,
+                clock: $clock
+            );
+
+            if ($totp->verify($userCode)) {
+                return $this->response->success([
+                    'success' => true,
+                    'message' => '2FA code verified successfully.',
+                ]);
+            } else {
+                return $this->response->unprocessableEntity("Invalid 2FA code.");
+            }
+
+        } catch (Exception $e) {
+            return $this->response->unprocessableEntity("Token decode or verification error: " . $e->getMessage());
         }
-
-        // Store image path in DB
-        $updated = $this->connectToDataBase->updateData(
-            $this->dbConnection,
-            RegTable,
-            ['image'],
-            [json_encode($imgResult)],
-            'id',
-            $userid
-        );
-
-        if ($updated) {
-            return $this->response->created("Profile image has been updated successfully.");
-        } else {
-            return $this->response->unprocessableEntity("Failed to update profile image. Please try again.");
-        }
-
-    } catch (InvalidArgumentException $e) {
-        return $this->response->unauthorized("Invalid token format.");
-    } catch (InvalidSignatureException $e) {
-        return $this->response->unauthorized("Invalid token signature.");
-    } catch (TokenExpiredException $e) {
-        return $this->response->unauthorized("Token has expired.");
-    } catch (Exception $e) {
-        return $this->response->unauthorized("Token decode error: " . $e->getMessage());
     }
-}
-
 }
 
 
