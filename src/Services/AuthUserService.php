@@ -176,6 +176,36 @@ class AuthUserService
             $this->response->unprocessableEntity($e->getMessage());
         }
     }
+    public function generateChangePasswordOtp(array $data)
+    {
+        try {
+            $fetchUserCondition = ['email' => $data['email']];
+            $emailData = ['createdAt' => $data['createdAt'], 'email' => $data['email']];
+            $EmailValData = $this->EmailDataGenerator->generateVerificationData($emailData);
+            $bindingArrayforEmailVal = $this->gateway->generateRandomStrings($EmailValData);
+
+            $createEmailVal = $this->createDbTables->createTableWithTypes(EmailValidation, $this->EmailCoulmn);
+            if ($createEmailVal) {
+                $createEmailValTable = $this->connectToDataBase->insertDataWithTypes($this->dbConnection, EmailValidation, $this->EmailCoulmn, $bindingArrayforEmailVal, $EmailValData);
+                if ($createEmailValTable) {
+                    $fetchUser = $this->gateway->fetchData(RegTable, $fetchUserCondition);
+                    $username = $fetchUser['name'];
+                    $sent = $this->mailsender->sendOtpForLogin($fetchUser['email'], $username, $EmailValData['verificationToken']);
+                    if ($sent === true) {
+                        $response = ['status' => 'true'];
+                        $this->response->created($response);
+                    } else {
+
+                        $this->response->unprocessableEntity('could not send mail to user');
+
+                    }
+
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->response->unprocessableEntity($e->getMessage());
+        }
+    }
     public function verifyLoginOtp(array $data)
     {
         try {
@@ -355,6 +385,53 @@ class AuthUserService
         }
     }
     public function resendOtp(array $data)
+    {
+        $emailData = ['createdAt' => $data['createdAt'], 'email' => $data['email']];
+        $EmailValData = $this->EmailDataGenerator->generateVerificationData($emailData);
+        try {
+            $conditions = ['email' => $data['email']];
+            $fetchUserWithEmail = $this->gateway->fetchData(RegTable, $conditions);
+
+            if (!$fetchUserWithEmail || !is_array($fetchUserWithEmail)) {
+                return $this->response->unprocessableEntity('User with the given email does not exist.');
+            }
+
+            $userEmail = $fetchUserWithEmail['email'];
+
+            $checkEmailConditions = ['email' => $userEmail];
+            $emailVerificationData = $this->gateway->fetchData(EmailValidation, $checkEmailConditions);
+
+            if ($emailVerificationData && is_array($emailVerificationData)) {
+                $emailVerificationID = $emailVerificationData['id'];
+
+                // Delete old verification record
+                $deleted = $this->connectToDataBase->deleteData($this->dbConnection, EmailValidation, 'id', $emailVerificationID);
+                if (!$deleted) {
+                    return $this->response->unprocessableEntity('Could not delete previous verification data.');
+                }
+            }
+
+
+            $bindingArrayforEmailVal = $this->gateway->generateRandomStrings($EmailValData);
+            $createEmailVal = $this->createDbTables->createTableWithTypes(EmailValidation, $this->EmailCoulmn);
+            if ($createEmailVal) {
+                $createEmailValTable = $this->connectToDataBase->insertDataWithTypes($this->dbConnection, EmailValidation, $this->EmailCoulmn, $bindingArrayforEmailVal, $EmailValData);
+                if ($createEmailValTable) {
+                    $sent = $this->mailsender->sendOtpEmail($fetchUserWithEmail['email'], $fetchUserWithEmail['name'], $EmailValData['verificationToken']);
+                    if ($sent === true) {
+                        $response = ['status' => 'true', 'email' => $fetchUserWithEmail['email']];
+                        $this->response->created($response);
+                    } else {
+                        $this->response->unprocessableEntity('could not send mail to user');
+                    }
+                }
+            }
+
+        } catch (\Throwable $e) {
+            $this->response->unprocessableEntity($e->getMessage());
+        }
+    }
+    public function resendChangePasswordOtp(array $data)
     {
         $emailData = ['createdAt' => $data['createdAt'], 'email' => $data['email']];
         $EmailValData = $this->EmailDataGenerator->generateVerificationData($emailData);
@@ -608,7 +685,7 @@ class AuthUserService
 
     public function verify2fa($data)
     {
-       
+
         $headers = apache_request_headers();
         $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
         if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
@@ -618,7 +695,7 @@ class AuthUserService
 
         try {
             $decodedPayload = $this->jwtCodec->decode($token);
-            $userId = $decodedPayload['sub']; 
+            $userId = $decodedPayload['sub'];
             $userCode = $data['token'] ?? null;
             if (!$userCode) {
                 return $this->response->unprocessableEntity("Verification code required.");

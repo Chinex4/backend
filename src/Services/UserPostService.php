@@ -1,16 +1,17 @@
-<?php 
-require_once __DIR__ . '/AuthUserService.php'; 
+<?php
+require_once __DIR__ . '/AuthUserService.php';
 
-class UserPostService{
+class UserPostService
+{
     private $pdovar;
     private $authService;
     private $columns;
- 
+
     public function __construct($pdoConnection)
     {
-        $this->pdovar = $pdoConnection; 
-        $this->authService = new AuthUserService($this->pdovar); 
-        $this->columns = require __DIR__ . '/../Config/UserColumns.php'; 
+        $this->pdovar = $pdoConnection;
+        $this->authService = new AuthUserService($this->pdovar);
+        $this->columns = require __DIR__ . '/../Config/UserColumns.php';
     }
 
     public function __destruct()
@@ -18,9 +19,9 @@ class UserPostService{
         $this->pdovar = null;
     }
 
-    public function handlePost(string $action, array $data,  $file): void
+    public function handlePost(string $action, array $data, $file): void
     {
-         
+
         switch ($action) {
             case "registerUser":
                 $this->authService->registerUser($data);
@@ -34,8 +35,14 @@ class UserPostService{
             case "otp":
                 $this->authService->otp($data);
                 break;
+            case "generateChangePasswordOtp":
+                $this->authService->generateChangePasswordOtp($data);
+                break;
             case "resend-otp":
                 $this->authService->resendOtp($data);
+                break;
+            case "resendChangePasswordOtp":
+                $this->authService->resendChangePasswordOtp($data);
                 break;
             case "login":
                 $this->authService->login($data);
@@ -58,7 +65,7 @@ class UserPostService{
             case "verify2fa":
                 $this->authService->verify2fa($data);
                 break;
-        
+
         }
     }
 }
