@@ -35,13 +35,16 @@ class UserPostService
             case "otp":
                 $this->authService->otp($data);
                 break;
-            case "generateChangePasswordOtp":
-                $this->authService->generateChangePasswordOtp($data);
-                break;
             case "resend-otp":
                 $this->authService->resendOtp($data);
                 break;
+            case "generateChangePasswordOtp":
+                $this->authService->generateChangePasswordOtp($data);
+                break;
             case "resendChangePasswordOtp":
+                $this->authService->resendChangePasswordOtp($data);
+                break;
+            case "verifyChangePasswordOtp":
                 $this->authService->resendChangePasswordOtp($data);
                 break;
             case "login":
