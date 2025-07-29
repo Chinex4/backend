@@ -823,7 +823,7 @@ class AuthUserService
                         $this->dbConnection,
                         RegTable,
                         ['isGoogleAUthEnabled'],
-                        ['Verified'],
+                        ['Pending'],
                         'id',
                         $userId
                      );
