@@ -191,7 +191,7 @@ class AuthUserService
                 if ($createEmailValTable) {
                     $fetchUser = $this->gateway->fetchData(RegTable, $fetchUserCondition);
                     $username = $fetchUser['name'];
-                    $sent = $this->mailsender->sendOtpForLogin($fetchUser['email'], $username, $EmailValData['verificationToken']);
+                    $sent = $this->mailsender->sendOtpForChangePassword($fetchUser['email'], $username, $EmailValData['verificationToken']);
                     if ($sent === true) {
                         $response = ['status' => 'true'];
                         $this->response->created($response);
@@ -559,7 +559,7 @@ class AuthUserService
             if ($createEmailVal) {
                 $createEmailValTable = $this->connectToDataBase->insertDataWithTypes($this->dbConnection, EmailValidation, $this->EmailCoulmn, $bindingArrayforEmailVal, $EmailValData);
                 if ($createEmailValTable) {
-                    $sent = $this->mailsender->sendOtpEmail($fetchUserWithEmail['email'], $fetchUserWithEmail['name'], $EmailValData['verificationToken']);
+                    $sent = $this->mailsender->sendOtpForChangePassword($fetchUserWithEmail['email'], $fetchUserWithEmail['name'], $EmailValData['verificationToken']);
                     if ($sent === true) {
                         $response = ['status' => 'true', 'email' => $fetchUserWithEmail['email']];
                         $this->response->created($response);
