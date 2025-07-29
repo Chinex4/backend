@@ -66,6 +66,25 @@ class EmailSender
         return false;
     }
 }
+public function sendGoogleAuthEmailVerificationCode(string $recipientEmail, string $fullname, string $otpCode): bool
+{
+    $html = $this->emailTemplate->buildGoogleAuthEmailOtpHtml($fullname, $otpCode, emailLogo, sitemail);
+
+    $email = (new Email())
+        ->from($this->fromEmail)
+        ->to($recipientEmail)
+        ->subject('Verify Your Email to Enable Google Authenticator on ' . $this->appName)
+        ->text('Your verification code is: ' . $otpCode)
+        ->html($html);
+
+    try {
+        $this->mailer->send($email);
+        return true;
+    } catch (\Throwable $e) {
+        error_log('Google Auth email verification failed: ' . $e->getMessage());
+        return false;
+    }
+}
 
     public function sendOtpForLogin(string $recipientEmail, string $fullname, string $otpCode): bool
     {

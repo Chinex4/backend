@@ -207,6 +207,37 @@ class AuthUserService
             $this->response->unprocessableEntity($e->getMessage());
         }
     }
+    public function generateGoogleAuthOtp(array $data)
+    {
+         
+        try {
+            $fetchUserCondition = ['email' => $data['email']];
+            $emailData = ['createdAt' => $data['createdAt'], 'email' => $data['email']];
+            $EmailValData = $this->EmailDataGenerator->generateVerificationData($emailData);
+            $bindingArrayforEmailVal = $this->gateway->generateRandomStrings($EmailValData);
+
+            $createEmailVal = $this->createDbTables->createTableWithTypes(EmailValidation, $this->EmailCoulmn);
+            if ($createEmailVal) {
+                $createEmailValTable = $this->connectToDataBase->insertDataWithTypes($this->dbConnection, EmailValidation, $this->EmailCoulmn, $bindingArrayforEmailVal, $EmailValData);
+                if ($createEmailValTable) {
+                    $fetchUser = $this->gateway->fetchData(RegTable, $fetchUserCondition);
+                    $username = $fetchUser['name'];
+                    $sent = $this->mailsender->sendGoogleAuthEmailVerificationCode($fetchUser['email'], $username, $EmailValData['verificationToken']);
+                    if ($sent === true) {
+                        $response = ['status' => 'true'];
+                        $this->response->created($response);
+                    } else {
+
+                        $this->response->unprocessableEntity('could not send mail to user');
+
+                    }
+
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->response->unprocessableEntity($e->getMessage());
+        }
+    }
     public function verifyLoginOtp(array $data)
     {
         try {
