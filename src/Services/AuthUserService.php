@@ -178,7 +178,7 @@ class AuthUserService
     }
     public function generateChangePasswordOtp(array $data)
     {
-         
+
         try {
             $fetchUserCondition = ['email' => $data['email']];
             $emailData = ['createdAt' => $data['createdAt'], 'email' => $data['email']];
@@ -209,7 +209,7 @@ class AuthUserService
     }
     public function generateGoogleAuthOtp(array $data)
     {
-         
+
         try {
             $fetchUserCondition = ['email' => $data['email']];
             $emailData = ['createdAt' => $data['createdAt'], 'email' => $data['email']];
@@ -297,6 +297,69 @@ class AuthUserService
             $this->response->unprocessableEntity($e->getMessage());
         }
     }
+    
+    public function verifyGoogleAuthOtp(array $data)
+{
+    try {
+        $email = $data['email'];
+        $otp = $data['otp'];
+        $conditionsForEmailval = ['email' => $email, 'verificationToken' => $otp];
+        $conditionsForUser = ['email' => $email];
+
+        $fetchEmailvalDetailsWithEmail = $this->gateway->fetchData(EmailValidation, $conditionsForEmailval);
+        $fetchUserDetailsWithEmail = $this->gateway->fetchData(RegTable, $conditionsForUser);
+
+        if ($fetchEmailvalDetailsWithEmail) {
+            if ($fetchUserDetailsWithEmail) {
+                $id = $fetchUserDetailsWithEmail['id'];
+                $emailId = $fetchEmailvalDetailsWithEmail['id'];
+
+                // Ensure the column exists
+                $createColumn = $this->createDbTables->createTable(RegTable, ['isGoogleAUthEnabled']);
+                if ($createColumn) {
+                    $updateUserStatus = $this->connectToDataBase->updateData(
+                        $this->dbConnection,
+                        RegTable,
+                        ['isGoogleAUthEnabled'],
+                        ['Verified'],
+                        'id',
+                         $id
+                     );
+                }
+
+                if ($updateUserStatus) {
+                    $header = 'Google Authenticator Email Verification Successful';
+                    $content = 'You have successfully verified your email address to activate Google Authenticator on your account. Your account is now secured with two-factor authentication (2FA).';
+
+                    $message = $this->gateway->createNotificationMessage($id, $header, $content, $data['createdAt']);
+
+                    if ($message) {
+                        $deleted = $this->connectToDataBase->deleteData($this->dbConnection, EmailValidation, 'id', $emailId);
+
+                        if ($deleted) {
+                            $this->response->success('Your Google Authenticator email verification is complete. 2FA is now active.');
+                        } else {
+                            $this->response->unprocessableEntity('Verification succeeded, but failed to remove the OTP record from validation table.');
+                        }
+                    } else {
+                        $this->response->unprocessableEntity('Verification succeeded, but failed to create a confirmation notification.');
+                    }
+                } else {
+                    $this->response->unprocessableEntity('Could not update user to reflect Google Authenticator status.');
+                }
+            } else {
+                $this->response->unprocessableEntity('No user found with this email address.');
+            }
+        } else {
+            $this->response->unprocessableEntity('Invalid or expired email verification code for Google Authenticator.');
+        }
+    } catch (\Throwable $e) {
+        $this->response->unprocessableEntity('Server error: ' . $e->getMessage());
+    }
+}
+
+
+
     public function verifyEmail(array $data)
     {
         try {

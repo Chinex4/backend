@@ -44,6 +44,9 @@ class UserPostService
             case "generateGoogleAuthOtp":
                 $this->authService->generateGoogleAuthOtp($data);
                 break;
+            case "verifyGoogleAuthOtp":
+                $this->authService->verifyGoogleAuthOtp($data);
+                break;
             case "resendChangePasswordOtp":
                 $this->authService->resendChangePasswordOtp($data);
                 break;
