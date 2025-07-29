@@ -816,10 +816,24 @@ class AuthUserService
             );
 
             if ($totp->verify($userCode)) {
-                return $this->response->success([
-                    'success' => true,
-                    'message' => '2FA code verified successfully.',
-                ]);
+
+                  $createColumn = $this->createDbTables->createTable(RegTable, ['isGoogleAUthEnabled']);
+                if ($createColumn) {
+                    $updateUserStatus = $this->connectToDataBase->updateData(
+                        $this->dbConnection,
+                        RegTable,
+                        ['isGoogleAUthEnabled'],
+                        ['Verified'],
+                        'id',
+                        $userId
+                     );
+                     if ($updateUserStatus) {
+                         return $this->response->success([
+                             'success' => true,
+                             'message' => '2FA code verified successfully.',
+                         ]);
+                     }
+                }
             } else {
                 return $this->response->unprocessableEntity("Invalid 2FA code.");
             }
