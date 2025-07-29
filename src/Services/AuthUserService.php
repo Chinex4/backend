@@ -178,6 +178,7 @@ class AuthUserService
     }
     public function generateChangePasswordOtp(array $data)
     {
+         
         try {
             $fetchUserCondition = ['email' => $data['email']];
             $emailData = ['createdAt' => $data['createdAt'], 'email' => $data['email']];

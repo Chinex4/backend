@@ -38,5 +38,5 @@ DEFINE('siteaddress', '7JR7+F94, George Town, Cayman Islands');
 DEFINE('sitenumber', '1(652)59444448');
 DEFINE('sitename', 'Cash Trade Pro');
 DEFINE('sitemail', 'support@cashtradepro.com');
-define('SMTP_DSN', 'smtp://mailing@cashtradepro.com:8&hf6%C]_ER{@l.c8.my-control-panel.com:465');
+define('SMTP_DSN', 'smtp://mailing@cashtradepro.com:8&hf6%C]_ER{@c8.my-control-panel.com:465');
 define('emailLogo', ipAddress.'cashtradeproApi/image/logo.png');

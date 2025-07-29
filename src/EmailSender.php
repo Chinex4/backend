@@ -48,6 +48,25 @@ class EmailSender
             return false;
         }
     }
+
+    public function sendOtpForChangePassword(string $recipientEmail, string $fullname, string $otpCode): bool
+{
+    $html = $this->emailTemplate->buildOtpForChangePasswordHtml($fullname, $otpCode, emailLogo, sitemail);
+    $email = (new Email())
+        ->from($this->fromEmail)
+        ->to($recipientEmail)
+        ->subject('Your ' . $this->appName . ' Password Change Verification Code')
+        ->text('Your password change verification code is: ' . $otpCode)
+        ->html($html);
+    try {
+        $this->mailer->send($email);
+        return true;
+    } catch (\Throwable $e) {
+        error_log('Change password OTP email send failed: ' . $e->getMessage());
+        return false;
+    }
+}
+
     public function sendOtpForLogin(string $recipientEmail, string $fullname, string $otpCode): bool
     {
         $html = $this->emailTemplate->buildOtpForLoginHtml($fullname, $otpCode, emailLogo, sitemail);
