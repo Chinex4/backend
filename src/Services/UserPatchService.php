@@ -22,7 +22,7 @@ class UserPatchService{
         $this->pdovar = null;
     }
 
-    public function handlePatch(string $action, array $data): void
+    public function handlePatch(string $action, ?array $data = null): void
     {
         switch ($action) {
             case "updateNickname":
@@ -30,6 +30,9 @@ class UserPatchService{
                 break;
             case "updateLanguage":
                 $this->patch->updateLanguage($data);
+                break;
+            case "disableGoogleAuth":
+                $this->patch->disableGoogleAuth();
                 break;
         }
     }

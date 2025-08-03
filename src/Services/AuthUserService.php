@@ -3,9 +3,13 @@ require_once __DIR__ . '/../constants.php';
 require_once __DIR__ . '/../EmailSender.php';
 require_once __DIR__ . '/Generators/UserDataGenerator.php';
 require_once __DIR__ . '/Generators/EmailDataGenerator.php';
+require_once __DIR__ . '/Generators/KycDataGenerator.php';
+require_once __DIR__ . '/Generators/advancedVerifDataGenerator.php';
 
 use Services\Generators\UserDataGenerator;
 use Services\Generators\EmailDataGenerator;
+use Services\Generators\KycDataGenerator;
+use Services\Generators\advancedVerifDataGenerator;
 
 class AuthUserService
 {
@@ -15,6 +19,8 @@ class AuthUserService
     private $gateway;
     private $userDataGenerator;
     private $EmailDataGenerator;
+    private $KycDataGenerator;
+    private $advancedVerifDataGenerator;
     private $createDbTables;
     private $response;
     private $connectToDataBase;
@@ -22,16 +28,22 @@ class AuthUserService
     private $jwtCodec;
     private $refreshTokenGateway;
     private $ForgotPasswordColumns;
+    private $KycColumn;
+    private $advancedVerifColumn;
 
     public function __construct($pdoConnection)
     {
         $this->dbConnection = $pdoConnection;
         $this->regUsercolumns = require __DIR__ . '/../Config/UserColumns.php';
         $this->EmailCoulmn = require __DIR__ . '/../Config/EmailCoulmn.php';
+        $this->KycColumn = require __DIR__ . '/../Config/KycColumn.php';
         $this->ForgotPasswordColumns = require __DIR__ . '/../Config/ForgotPasswordColumns.php';
+        $this->advancedVerifColumn = require __DIR__ . '/../Config/advancedVerifColumn.php';
         $this->gateway = new TaskGatewayFunction($this->dbConnection);
         $this->userDataGenerator = new UserDataGenerator($this->gateway);
         $this->EmailDataGenerator = new EmailDataGenerator($this->gateway);
+        $this->KycDataGenerator = new KycDataGenerator($this->gateway);
+        $this->advancedVerifDataGenerator = new advancedVerifDataGenerator($this->gateway);
         $this->createDbTables = new CreateDbTables($this->dbConnection);
         $this->response = new JsonResponse();
         $this->connectToDataBase = new Database();
@@ -44,6 +56,144 @@ class AuthUserService
     public function __destruct()
     {
         $this->dbConnection = null;
+    }
+    public function advancedVerification(array $data = null, array $file)
+    {
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+
+        $token = $matches[1];
+
+        // try {
+        // Decode JWT token
+        $decodedPayload = $this->jwtCodec->decode($token);
+        $userid = $decodedPayload['sub'];
+
+        $user = $this->gateway->fetchData(RegTable, ['id' => $userid]);
+        $proofOfAddress = $this->gateway->processImageWithgivenNameFiles($file['proofOfAddress']);
+        if (is_array($proofOfAddress) || !is_string($proofOfAddress) || empty($proofOfAddress)) {
+            return $this->response->unprocessableEntity('Invalid or failed to process front image.');
+        }
+
+        $regdata = array_merge([
+            'proofOfAddress' => $proofOfAddress
+        ], $data, ['userId' => $user['accToken']]);
+        $advancedData = $this->advancedVerifDataGenerator->generateDefaultData($regdata);
+        $result = $this->createDbTables->createTableWithTypes(advancedVerification, $this->advancedVerifColumn);
+        $bindingArrayforRegUser = $this->gateway->generateRandomStrings($advancedData);
+
+        if ($result) {
+            $id = $this->gateway->createForUserWithTypes($this->dbConnection, advancedVerification, $this->advancedVerifColumn, $bindingArrayforRegUser, $advancedData);
+            if ($id) {
+                $notification = $this->gateway->createNotificationMessage(
+                    $userid,
+                    '📄 Advanced Verification Submitted',
+                    'Thank you for submitting your proof of address. Our team will review it shortly.',
+                    $data['createdAt'] ?? date('Y-m-d H:i:s')
+                );
+                if ($notification) {
+                    $username = $user['name'];
+                    // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
+                    // if ($sent === true) {
+                    $response = ['status' => 'true'];
+                    $this->response->created($response);
+                    // } else {
+
+                    //     $this->response->unprocessableEntity('could not send mail to user');
+
+                    // }
+                }
+            }
+
+        }
+
+        // } catch (InvalidArgumentException $e) {
+        //     return $this->response->unauthorized("Invalid token format.");
+        // } catch (InvalidSignatureException $e) {
+        //     return $this->response->unauthorized("Invalid token signature.");
+        // } catch (TokenExpiredException $e) {
+        //     return $this->response->unauthorized("Token has expired.");
+        // } catch (Exception $e) {
+        //     return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+        // }
+
+
+    }
+    public function submitVerification(array $data, array $file)
+    {
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+
+        $token = $matches[1];
+
+        try {
+            // Decode JWT token
+            $decodedPayload = $this->jwtCodec->decode($token);
+            $userid = $decodedPayload['sub'];
+
+            $user = $this->gateway->fetchData(RegTable, ['id' => $userid]);
+            $frontImage = $this->gateway->processImageWithgivenNameFiles($file['frontImage']);
+            if (is_array($frontImage) || !is_string($frontImage) || empty($frontImage)) {
+                return $this->response->unprocessableEntity('Invalid or failed to process front image.');
+            }
+
+            // Process back image
+            $backImage = $this->gateway->processImageWithgivenNameFiles($file['backImage']);
+            if (is_array($backImage) || !is_string($backImage) || empty($backImage)) {
+                return $this->response->unprocessableEntity('Invalid or failed to process back image.');
+            }
+
+            $regdata = array_merge($data, [
+                'frontImage' => $frontImage,
+                'backImage' => $backImage
+            ], ['accToken' => $user['accToken']]);
+            $kycData = $this->KycDataGenerator->generateDefaultData($regdata);
+            $result = $this->createDbTables->createTableWithTypes(idVer, $this->KycColumn);
+            $bindingArrayforRegUser = $this->gateway->generateRandomStrings($kycData);
+            if ($result) {
+                $id = $this->gateway->createForUserWithTypes($this->dbConnection, idVer, $this->KycColumn, $bindingArrayforRegUser, $kycData);
+                if ($id) {
+                    $notification = $this->gateway->createNotificationMessage(
+                        $userid,
+                        '📄 Basic Verification Submitted',
+                        'Thank you for submitting your basic verification. Our team will review it shortly.',
+                        $data['createdAt']
+                    );
+                    if ($notification) {
+                        $username = $user['name'];
+                        // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
+                        // if ($sent === true) {
+                        $response = ['status' => 'true'];
+                        $this->response->created($response);
+                        // } else {
+
+                        //     $this->response->unprocessableEntity('could not send mail to user');
+
+                        // }
+                    }
+                }
+
+            }
+
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+        }
+
+
     }
 
     public function registerUser(array $data)
@@ -297,68 +447,126 @@ class AuthUserService
             $this->response->unprocessableEntity($e->getMessage());
         }
     }
-    
+    public function verifyChangePasswordOtp(array $data)
+    {
+        try {
+            $email = $data['email'] ?? null;
+            $otp = $data['otp'] ?? null;
+            $createdAt = $data['createdAt'] ?? date('Y-m-d H:i:s');
+
+            if (!$email || !$otp) {
+                return $this->response->unprocessableEntity("Email and OTP are required.");
+            }
+
+            // Fetch OTP record
+            $emailValidationRecord = $this->gateway->fetchData(EmailValidation, [
+                'email' => $email,
+                'verificationToken' => $otp
+            ]);
+
+            if (!$emailValidationRecord) {
+                return $this->response->unprocessableEntity('Invalid or expired verification token.');
+            }
+
+            // Fetch user by email
+            $user = $this->gateway->fetchData(RegTable, ['email' => $email]);
+            if (!$user) {
+                return $this->response->unprocessableEntity('User not found.');
+            }
+
+            $userId = $user['id'];
+            $emailValId = $emailValidationRecord['id'];
+
+            // Update verification status only (no password change)
+            $update = $this->connectToDataBase->updateData(
+                $this->dbConnection,
+                RegTable,
+                ['emailVerication', 'refreshToken'],
+                ['Verified', 'true'],
+                'id',
+                $userId
+            );
+
+            if (!$update) {
+                return $this->response->unprocessableEntity("Failed to update user verification status.");
+            }
+
+            // Notify user
+            $this->gateway->createNotificationMessage(
+                $userId,
+                '📧 Email OTP Verified',
+                'Your verification code has been successfully confirmed. You may now proceed to change your password.',
+                $createdAt
+            );
+
+            // Delete used OTP token
+            $this->connectToDataBase->deleteData($this->dbConnection, EmailValidation, 'id', $emailValId);
+
+            return $this->response->success('OTP verified successfully.');
+
+        } catch (\Throwable $e) {
+            return $this->response->unprocessableEntity("Error: " . $e->getMessage());
+        }
+    }
     public function verifyGoogleAuthOtp(array $data)
-{
-    try {
-        $email = $data['email'];
-        $otp = $data['otp'];
-        $conditionsForEmailval = ['email' => $email, 'verificationToken' => $otp];
-        $conditionsForUser = ['email' => $email];
+    {
+        try {
+            $email = $data['email'];
+            $otp = $data['otp'];
+            $conditionsForEmailval = ['email' => $email, 'verificationToken' => $otp];
+            $conditionsForUser = ['email' => $email];
 
-        $fetchEmailvalDetailsWithEmail = $this->gateway->fetchData(EmailValidation, $conditionsForEmailval);
-        $fetchUserDetailsWithEmail = $this->gateway->fetchData(RegTable, $conditionsForUser);
+            $fetchEmailvalDetailsWithEmail = $this->gateway->fetchData(EmailValidation, $conditionsForEmailval);
+            $fetchUserDetailsWithEmail = $this->gateway->fetchData(RegTable, $conditionsForUser);
 
-        if ($fetchEmailvalDetailsWithEmail) {
-            if ($fetchUserDetailsWithEmail) {
-                $id = $fetchUserDetailsWithEmail['id'];
-                $emailId = $fetchEmailvalDetailsWithEmail['id'];
+            if ($fetchEmailvalDetailsWithEmail) {
+                if ($fetchUserDetailsWithEmail) {
+                    $id = $fetchUserDetailsWithEmail['id'];
+                    $emailId = $fetchEmailvalDetailsWithEmail['id'];
 
-                // Ensure the column exists
-                $createColumn = $this->createDbTables->createTable(RegTable, ['isGoogleAUthEnabled']);
-                if ($createColumn) {
-                    $updateUserStatus = $this->connectToDataBase->updateData(
-                        $this->dbConnection,
-                        RegTable,
-                        ['isGoogleAUthEnabled'],
-                        ['Verified'],
-                        'id',
-                         $id
-                     );
-                }
+                    // Ensure the column exists
+                    $createColumn = $this->createDbTables->createTable(RegTable, ['isGoogleAUthEnabled']);
+                    if ($createColumn) {
+                        $updateUserStatus = $this->connectToDataBase->updateData(
+                            $this->dbConnection,
+                            RegTable,
+                            ['isGoogleAUthEnabled'],
+                            ['Verified'],
+                            'id',
+                            $id
+                        );
+                    }
 
-                if ($updateUserStatus) {
-                    $header = 'Google Authenticator Email Verification Successful';
-                    $content = 'You have successfully verified your email address to activate Google Authenticator on your account. Your account is now secured with two-factor authentication (2FA).';
+                    if ($updateUserStatus) {
+                        $header = 'Google Authenticator Email Verification Successful';
+                        $content = 'You have successfully verified your email address to activate Google Authenticator on your account. Your account is now secured with two-factor authentication (2FA).';
 
-                    $message = $this->gateway->createNotificationMessage($id, $header, $content, $data['createdAt']);
+                        $message = $this->gateway->createNotificationMessage($id, $header, $content, $data['createdAt']);
 
-                    if ($message) {
-                        $deleted = $this->connectToDataBase->deleteData($this->dbConnection, EmailValidation, 'id', $emailId);
+                        if ($message) {
+                            $deleted = $this->connectToDataBase->deleteData($this->dbConnection, EmailValidation, 'id', $emailId);
 
-                        if ($deleted) {
-                            $this->response->success('Your Google Authenticator email verification is complete. 2FA is now active.');
+                            if ($deleted) {
+                                $this->response->success('Your Google Authenticator email verification is complete. 2FA is now active.');
+                            } else {
+                                $this->response->unprocessableEntity('Verification succeeded, but failed to remove the OTP record from validation table.');
+                            }
                         } else {
-                            $this->response->unprocessableEntity('Verification succeeded, but failed to remove the OTP record from validation table.');
+                            $this->response->unprocessableEntity('Verification succeeded, but failed to create a confirmation notification.');
                         }
                     } else {
-                        $this->response->unprocessableEntity('Verification succeeded, but failed to create a confirmation notification.');
+                        $this->response->unprocessableEntity('Could not update user to reflect Google Authenticator status.');
                     }
                 } else {
-                    $this->response->unprocessableEntity('Could not update user to reflect Google Authenticator status.');
+                    $this->response->unprocessableEntity('No user found with this email address.');
                 }
             } else {
-                $this->response->unprocessableEntity('No user found with this email address.');
+                $this->response->unprocessableEntity('Invalid or expired email verification code for Google Authenticator.');
             }
-        } else {
-            $this->response->unprocessableEntity('Invalid or expired email verification code for Google Authenticator.');
+        } catch (\Throwable $e) {
+            $this->response->unprocessableEntity('Server error: ' . $e->getMessage());
         }
-    } catch (\Throwable $e) {
-        $this->response->unprocessableEntity('Server error: ' . $e->getMessage());
     }
-}
-
-
 
     public function verifyEmail(array $data)
     {
@@ -777,6 +985,107 @@ class AuthUserService
             return $this->response->unauthorized("Token decode error: " . $e->getMessage());
         }
     }
+    public function disableAccount()
+    {
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+
+        $token = $matches[1];
+
+    //     try {
+    //         // Decode JWT token
+    //         $decodedPayload = $this->jwtCodec->decode($token);
+    //         $userid = $decodedPayload['sub'];
+
+    //  $advancedData = $this->advancedVerifDataGenerator->generateDefaultData($regdata);
+    //     $result = $this->createDbTables->createTableWithTypes(advancedVerification, $this->advancedVerifColumn);
+    //     $bindingArrayforRegUser = $this->gateway->generateRandomStrings($advancedData);
+
+    //     if ($result) {
+    //         $id = $this->gateway->createForUserWithTypes($this->dbConnection, advancedVerification, $this->advancedVerifColumn, $bindingArrayforRegUser, $advancedData);
+    //         if ($id) {
+    //             $notification = $this->gateway->createNotificationMessage(
+    //                 $userid,
+    //                 '📄 Advanced Verification Submitted',
+    //                 'Thank you for submitting your proof of address. Our team will review it shortly.',
+    //                 $data['createdAt'] ?? date('Y-m-d H:i:s')
+    //             );
+    //             if ($notification) {
+    //                 $username = $user['name'];
+    //                 // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
+    //                 // if ($sent === true) {
+    //                 $response = ['status' => 'true'];
+    //                 $this->response->created($response);
+    //                 // } else {
+
+    //                 //     $this->response->unprocessableEntity('could not send mail to user');
+
+    //                 // }
+    //             }
+    //         }
+
+    //     }
+            
+
+    //     } catch (InvalidArgumentException $e) {
+    //         return $this->response->unauthorized("Invalid token format.");
+    //     } catch (InvalidSignatureException $e) {
+    //         return $this->response->unauthorized("Invalid token signature.");
+    //     } catch (TokenExpiredException $e) {
+    //         return $this->response->unauthorized("Token has expired.");
+    //     } catch (Exception $e) {
+    //         return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+    //     }
+    }
+    public function setAntiPhishingCode($data)
+    {
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+
+        $token = $matches[1];
+
+        try {
+            // Decode JWT token
+            $decodedPayload = $this->jwtCodec->decode($token);
+            $userid = $decodedPayload['sub'];
+
+            $createColumn = $this->createDbTables->createTable(RegTable, ['setAntiPhishingCode']);
+            if ($createColumn) {
+                // Store anti-phishing code in DB
+                $updated = $this->connectToDataBase->updateData(
+                    $this->dbConnection,
+                    RegTable,
+                    ['setAntiPhishingCode'],
+                    [$data['code']],
+                    'id',
+                    $userid
+                );
+                if ($updated) {
+                    return $this->response->created("Anti-phishing code has been set successfully.");
+                } else {
+                    return $this->response->unprocessableEntity("Failed to set anti-phishing code. Please try again.");
+                }
+            }
+
+
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+        }
+    }
 
     public function verify2fa($data)
     {
@@ -786,8 +1095,8 @@ class AuthUserService
         if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
             return $this->response->unauthorized("Authorization header missing or invalid");
         }
-        $token = $matches[1];
 
+        $token = $matches[1];
         try {
             $decodedPayload = $this->jwtCodec->decode($token);
             $userId = $decodedPayload['sub'];
@@ -817,7 +1126,7 @@ class AuthUserService
 
             if ($totp->verify($userCode)) {
 
-                  $createColumn = $this->createDbTables->createTable(RegTable, ['isGoogleAUthEnabled']);
+                $createColumn = $this->createDbTables->createTable(RegTable, ['isGoogleAUthEnabled']);
                 if ($createColumn) {
                     $updateUserStatus = $this->connectToDataBase->updateData(
                         $this->dbConnection,
@@ -826,13 +1135,13 @@ class AuthUserService
                         ['Pending'],
                         'id',
                         $userId
-                     );
-                     if ($updateUserStatus) {
-                         return $this->response->success([
-                             'success' => true,
-                             'message' => '2FA code verified successfully.',
-                         ]);
-                     }
+                    );
+                    if ($updateUserStatus) {
+                        return $this->response->success([
+                            'success' => true,
+                            'message' => '2FA code verified successfully.',
+                        ]);
+                    }
                 }
             } else {
                 return $this->response->unprocessableEntity("Invalid 2FA code.");
@@ -842,6 +1151,8 @@ class AuthUserService
             return $this->response->unprocessableEntity("Token decode or verification error: " . $e->getMessage());
         }
     }
+
+
 }
 
 

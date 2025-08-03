@@ -209,6 +209,8 @@ class Database
 
     public function insertDataWithTypes(PDO $pdo, string $tableName, array $columns, array $bindingArray, array $data)
     {
+        // var_dump($columns,$data);
+
         // Validate: column count and data count must match
         if (count($columns) !== count($data)) {
             throw new InvalidArgumentException("Number of columns and data elements must match");

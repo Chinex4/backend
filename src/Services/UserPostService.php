@@ -51,7 +51,7 @@ class UserPostService
                 $this->authService->resendChangePasswordOtp($data);
                 break;
             case "verifyChangePasswordOtp":
-                $this->authService->resendChangePasswordOtp($data);
+                $this->authService->verifyChangePasswordOtp($data);
                 break;
             case "login":
                 $this->authService->login($data);
@@ -73,6 +73,15 @@ class UserPostService
                 break;
             case "verify2fa":
                 $this->authService->verify2fa($data);
+                break;
+            case "setAntiPhishingCode":
+                $this->authService->setAntiPhishingCode($data);
+                break;
+            case "submitVerification":
+                $this->authService->submitVerification($data, $file);
+                break;
+            case "disableAccount":
+                $this->authService->disableAccount();
                 break;
 
         }
