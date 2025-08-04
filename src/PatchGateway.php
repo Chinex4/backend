@@ -37,11 +37,11 @@ class PatchGateway
         $this->dbConnection = null;
     }
 
-    public function approveKyc(string $accToken, array $data)
+    public function approveKyc(string $accToken, array $data = null)
     {
         $createColumn = $this->createDbTables->createTable(idVer, ['status']);
         if ($createColumn) {
-            $updated = $this->connectToDataBase->updateData($this->dbConnection, idVer, ['status'], ['true'], 'accToken', $accToken);
+            $updated = $this->connectToDataBase->updateData($this->dbConnection, idVer, ['status', 'updatedAt'], ['Approved', $data['createdAt']], 'id', $accToken);
             if ($updated) {
                 $this->response->created("OTP login has been enabled for this user.");
             } else {
