@@ -1,5 +1,6 @@
 <?php
 DEFINE('ipAddress', 'http://192.168.1.212/');
+// DEFINE('ipAddress', 'http://192.168.1.238/');
 DEFINE('RegTable', 'registertable');
 DEFINE('admintable', 'admintable');
 DEFINE('EmailValidation', 'emailvalidation');
