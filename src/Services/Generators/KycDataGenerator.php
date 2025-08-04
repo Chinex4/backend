@@ -27,7 +27,7 @@ class KycDataGenerator
             // 'userId' => null,
             'kycId' => str_pad(random_int(0, 999999999), 9, '0', STR_PAD_LEFT),
             'status' => "Pending",
-            'createdAt' => null,
+            // 'createdAt' => null,
             'updatedAt' => null, 
             'phoneNumber' => null,
             'ipAddress' =>  fn() => $this->gateway->getIPAddress(),

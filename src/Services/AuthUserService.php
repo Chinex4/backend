@@ -156,32 +156,34 @@ class AuthUserService
                 'frontImage' => $frontImage,
                 'backImage' => $backImage
             ], ['accToken' => $user['accToken']]);
+
+            // var_dump($regdata);
             $kycData = $this->KycDataGenerator->generateDefaultData($regdata);
             $result = $this->createDbTables->createTableWithTypes(idVer, $this->KycColumn);
             $bindingArrayforRegUser = $this->gateway->generateRandomStrings($kycData);
 
             if ($result) {
                 $id = $this->gateway->createForUserWithTypes($this->dbConnection, idVer, $this->KycColumn, $bindingArrayforRegUser, $kycData);
-                if ($id) {
-                    $notification = $this->gateway->createNotificationMessage(
-                        $userid,
-                        'Basic Verification Submitted',
-                        'Thank you for submitting your basic verification. Our team will review it shortly.',
-                        $data['createdAt']
-                    );
-                    if ($notification) {
-                        $username = $user['name'];
-                        // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
-                        // if ($sent === true) {
-                        $response = ['status' => 'true'];
-                        $this->response->created($response);
-                        // } else {
+                // if ($id) {
+                //     $notification = $this->gateway->createNotificationMessage(
+                //         $userid,
+                //         'Basic Verification Submitted',
+                //         'Thank you for submitting your basic verification. Our team will review it shortly.',
+                //         $data['createdAt']
+                //     );
+                //     if ($notification) {
+                //         $username = $user['name'];
+                //         // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
+                //         // if ($sent === true) {
+                //         $response = ['status' => 'true'];
+                //         $this->response->created($response);
+                //         // } else {
 
-                        //     $this->response->unprocessableEntity('could not send mail to user');
+                //         //     $this->response->unprocessableEntity('could not send mail to user');
 
-                        // }
-                    }
-                }
+                //         // }
+                //     }
+                // }
 
             }
 
