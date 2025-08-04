@@ -32,6 +32,9 @@ class AdminDeleteService{
             case "deleteWallet": 
                 $this->delete->deleteWallet($id);
                 break;
+            case "deleteKyc": 
+                $this->delete->deleteKyc($id);
+                break;
         }
     }
 }

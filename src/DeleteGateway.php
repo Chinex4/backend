@@ -42,4 +42,14 @@ class DeleteGateway
         }
 
     }
+    public function deleteKyc($id)
+    {
+        $deletDeposit = $this->connectToDataBase->deleteData($this->dbConnection, idVer, 'id', $id);
+        if ($deletDeposit) {
+            return $this->response->success('this basic verification details has been has been deleted successfully');
+        } else {
+            $this->response->unprocessableEntity('could not delete basic verification details');
+        }
+
+    }
 }

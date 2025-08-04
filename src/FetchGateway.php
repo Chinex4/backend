@@ -73,6 +73,11 @@ class FetchGateway
         $wallet = $this->gateway->fetchAllData(wallet);
         return $this->response->success($wallet);
     }
+    public function getBasicKycs()
+    {
+        $wallet = $this->gateway->fetchAllData(idVer);
+        return $this->response->success($wallet);
+    }
 
     public function generate2Fa()
     {
