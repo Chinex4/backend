@@ -5,11 +5,13 @@ require_once __DIR__ . '/Generators/UserDataGenerator.php';
 require_once __DIR__ . '/Generators/EmailDataGenerator.php';
 require_once __DIR__ . '/Generators/KycDataGenerator.php';
 require_once __DIR__ . '/Generators/advancedVerifDataGenerator.php';
+require_once __DIR__ . '/Generators/institutionalVerificationGenerator.php';
 
 use Services\Generators\UserDataGenerator;
 use Services\Generators\EmailDataGenerator;
 use Services\Generators\KycDataGenerator;
 use Services\Generators\advancedVerifDataGenerator;
+use Services\Generators\institutionalVerificationGenerator;
 
 class AuthUserService
 {
@@ -21,6 +23,7 @@ class AuthUserService
     private $EmailDataGenerator;
     private $KycDataGenerator;
     private $advancedVerifDataGenerator;
+    private $institutionalVerificationGenerator;
     private $createDbTables;
     private $response;
     private $connectToDataBase;
@@ -30,6 +33,7 @@ class AuthUserService
     private $ForgotPasswordColumns;
     private $KycColumn;
     private $advancedVerifColumn;
+    private $institutionalVerificationColumn;
 
     public function __construct($pdoConnection)
     {
@@ -39,11 +43,13 @@ class AuthUserService
         $this->KycColumn = require __DIR__ . '/../Config/KycColumn.php';
         $this->ForgotPasswordColumns = require __DIR__ . '/../Config/ForgotPasswordColumns.php';
         $this->advancedVerifColumn = require __DIR__ . '/../Config/advancedVerifColumn.php';
+        $this->institutionalVerificationColumn = require __DIR__ . '/../Config/institutionalVerificationColumn.php';
         $this->gateway = new TaskGatewayFunction($this->dbConnection);
         $this->userDataGenerator = new UserDataGenerator($this->gateway);
         $this->EmailDataGenerator = new EmailDataGenerator($this->gateway);
         $this->KycDataGenerator = new KycDataGenerator($this->gateway);
         $this->advancedVerifDataGenerator = new advancedVerifDataGenerator($this->gateway);
+        $this->institutionalVerificationGenerator = new institutionalVerificationGenerator($this->gateway);
         $this->createDbTables = new CreateDbTables($this->dbConnection);
         $this->response = new JsonResponse();
         $this->connectToDataBase = new Database();
@@ -91,7 +97,7 @@ class AuthUserService
             if ($id) {
                 $notification = $this->gateway->createNotificationMessage(
                     $userid,
-                    '📄 Advanced Verification Submitted',
+                    'Advanced Verification Submitted',
                     'Thank you for submitting your proof of address. Our team will review it shortly.',
                     $data['createdAt'] ?? date('Y-m-d H:i:s')
                 );
@@ -120,6 +126,67 @@ class AuthUserService
         // } catch (Exception $e) {
         //     return $this->response->unauthorized("Token decode error: " . $e->getMessage());
         // }
+
+
+    }
+    public function institutionalVerification(array $data = null, array $file)
+    {
+      
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+
+        $token = $matches[1];
+
+        try {
+        // Decode JWT token
+        $decodedPayload = $this->jwtCodec->decode($token);
+        $userid = $decodedPayload['sub'];
+
+        $user = $this->gateway->fetchData(RegTable, ['id' => $userid]);
+       
+
+        $regdata = array_merge( $data, ['userId' => $user['accToken']]);
+        $institutionalVerificationData = $this->institutionalVerificationGenerator->generateDefaultData($regdata);
+        $result = $this->createDbTables->createTableWithTypes(institutionalVerification, $this->institutionalVerificationColumn);
+        $bindingArrayforRegUser = $this->gateway->generateRandomStrings($institutionalVerificationData);
+//   var_dump($institutionalVerificationData, $this->institutionalVerificationColumn);
+        if ($result) {
+            $id = $this->gateway->createForUserWithTypes($this->dbConnection, institutionalVerification, $this->institutionalVerificationColumn, $bindingArrayforRegUser, $institutionalVerificationData);
+            if ($id) {
+                $notification = $this->gateway->createNotificationMessage(
+                    $userid,
+                    'Advanced Verification Submitted',
+                    'Thank you for submitting your proof of address. Our team will review it shortly.',
+                    $data['createdAt'] ?? date('Y-m-d H:i:s')
+                );
+                if ($notification) {
+                    $username = $user['name'];
+                    // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
+                    // if ($sent === true) {
+                    $response = ['status' => 'true'];
+                    $this->response->created($response);
+                    // } else {
+
+                    //     $this->response->unprocessableEntity('could not send mail to user');
+
+                    // }
+                }
+            }
+        }
+
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+        }
 
 
     }

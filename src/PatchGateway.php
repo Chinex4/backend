@@ -42,12 +42,19 @@ class PatchGateway
         var_dump($accToken);
         $createColumn = $this->createDbTables->createTable(idVer, ['status']);
         if ($createColumn) {
-            $updated = $this->connectToDataBase->updateData($this->dbConnection, idVer, ['status', 'updatedAt'], ['Approved', $data['createdAt']], 'id', $accToken);
+            $updated = $this->connectToDataBase->updateData($this->dbConnection, idVer, ['status', 'updatedAt'], ['Verified', $data['createdAt']], 'id', $accToken);
             if ($updated) {
-                $this->response->created("KYC has been approved for this user.");
+                // $this->response->created("KYC has been approved for this user.");  
+                $updateUSerKyc = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['BasicVerification'], ['Verified'], 'id', $accToken);
+            if ($updateUSerKyc) {
+                // $this->response->created("KYC has been approved for this user.");
             } else {
                 $this->response->unprocessableEntity('KYC has been disapproved');
             }
+            } else {
+                $this->response->unprocessableEntity('KYC has been disapproved');
+            }
+          
         }
     }
 

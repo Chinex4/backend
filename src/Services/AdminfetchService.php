@@ -35,6 +35,12 @@ class AdminfetchService{
                  case "getBasicKycs": 
                 $this->fetch->getBasicKycs();
                 break;
+                 case "getAdvancedKycs": 
+                $this->fetch->getAdvancedKycs();
+                break;
+                 case "getInstitutionalVerifications": 
+                $this->fetch->getInstitutionalVerifications();
+                break;
             case "fetchWallets": 
                 $this->fetch->fetchWallets();
                 break;

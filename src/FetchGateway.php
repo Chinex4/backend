@@ -75,8 +75,18 @@ class FetchGateway
     }
     public function getBasicKycs()
     {
-        $wallet = $this->gateway->fetchAllData(idVer);
-        return $this->response->success($wallet);
+        $BasicKycs = $this->gateway->fetchAllData(idVer);
+        return $this->response->success($BasicKycs);
+    }
+    public function getAdvancedKycs()
+    {
+        $advancedVerification = $this->gateway->fetchAllData(advancedVerification);
+        return $this->response->success($advancedVerification);
+    }
+    public function getInstitutionalVerifications()
+    {
+        $advancedVerification = $this->gateway->fetchAllData(institutionalVerification);
+        return $this->response->success($advancedVerification);
     }
 
     public function generate2Fa()

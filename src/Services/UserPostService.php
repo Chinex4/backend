@@ -80,6 +80,12 @@ class UserPostService
             case "submitVerification":
                 $this->authService->submitVerification($data, $file);
                 break;
+            case "advancedVerification":
+                $this->authService->advancedVerification($data, $file);
+                break;
+            case "institutionalVerification":
+                $this->authService->institutionalVerification($data, $file);
+                break;
             case "disableAccount":
                 $this->authService->disableAccount();
                 break;

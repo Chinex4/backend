@@ -24,7 +24,7 @@ class TaskController
             echo json_encode(['error' => 'Invalid request type']);
             return;
         }
-var_dump($method, $type, $action, $id);
+// var_dump($method, $type, $action, $id);
         $gateway = $this->gateways[$type];
 
         switch ($method) {
