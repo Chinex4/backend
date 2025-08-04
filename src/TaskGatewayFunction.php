@@ -93,7 +93,7 @@ class TaskGatewayFunction
         $messageColumn = ['userid', 'messageHeader', 'content', 'sent_at', 'read_at', 'status'];
         $messageColumnArray = ['userid', 'messageHeader', 'content', 'sent_at', 'read_at', 'status'];
         $BindingArray = $this->generateRandomStrings($messageColumnArray);
-        $s = $s || date('d-m-Y h:i:s a', time());
+        $s = $s ?? date('Y-m-d H:i:s');
         $r = null;
         $st = null;
         $messageData = [$id, $h, $c, $s, $r, $st];

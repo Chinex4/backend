@@ -125,6 +125,7 @@ class AuthUserService
     }
     public function submitVerification(array $data, array $file)
     {
+
         $headers = apache_request_headers();
         $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
 
@@ -164,7 +165,7 @@ class AuthUserService
                 if ($id) {
                     $notification = $this->gateway->createNotificationMessage(
                         $userid,
-                        '📄 Basic Verification Submitted',
+                        'Basic Verification Submitted',
                         'Thank you for submitting your basic verification. Our team will review it shortly.',
                         $data['createdAt']
                     );
