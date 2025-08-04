@@ -13,8 +13,6 @@ return [
     'kycId' => 'VARCHAR(20) NOT NULL',
     'status' => 'VARCHAR(20) DEFAULT "Pending"',
     'updatedAt' => 'VARCHAR(50) DEFAULT NULL',
-    'nationality' => 'VARCHAR(100) DEFAULT NULL',
-    'gender' => 'VARCHAR(10) DEFAULT NULL',
     'phoneNumber' => 'VARCHAR(20) DEFAULT NULL',
     'ipAddress' => 'VARCHAR(45) DEFAULT NULL',
     'reviewedBy' => 'VARCHAR(100) DEFAULT NULL',

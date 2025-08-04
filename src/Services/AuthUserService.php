@@ -158,6 +158,7 @@ class AuthUserService
             $kycData = $this->KycDataGenerator->generateDefaultData($regdata);
             $result = $this->createDbTables->createTableWithTypes(idVer, $this->KycColumn);
             $bindingArrayforRegUser = $this->gateway->generateRandomStrings($kycData);
+
             if ($result) {
                 $id = $this->gateway->createForUserWithTypes($this->dbConnection, idVer, $this->KycColumn, $bindingArrayforRegUser, $kycData);
                 if ($id) {
