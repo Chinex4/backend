@@ -75,6 +75,10 @@ class PatchGateway
     }
     public function approveKyc(string $accToken, array $data)
     {
+<<<<<<< HEAD
+=======
+        // var_dump($accToken);
+>>>>>>> b77fc6ddb7309fefed30533734a3aff718eec18e
         $createColumn = $this->createDbTables->createTable(idVer, ['status']);
         if ($createColumn) {
             $updated = $this->connectToDataBase->updateData($this->dbConnection, idVer, ['status', 'updatedAt'], ['Verified', $data['createdAt']], 'id', $accToken);
