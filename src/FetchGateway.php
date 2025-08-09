@@ -62,6 +62,32 @@ class FetchGateway
             return $this->response->unauthorized("Token decode error: " . $e->getMessage());
         }
     }
+    public function getCoins()
+    {
+
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+
+        $token = $matches[1];
+        try {
+            $decodedPayload = $this->jwtCodec->decode($token);
+            // Fetch user by ID
+            $user = $this->gateway->fetchAllData(wallet);
+            return $this->response->success(['userDetails' => $user]);
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+        }
+    }
 
     public function fetchAlluser()
     {

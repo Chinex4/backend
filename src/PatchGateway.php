@@ -37,24 +37,110 @@ class PatchGateway
         $this->dbConnection = null;
     }
 
+    public function approveAdvancedKyc(string $accToken, array $data)
+    {
+        $createColumn = $this->createDbTables->createTable(advancedVerification, ['status']);
+        if ($createColumn) {
+            $updated = $this->connectToDataBase->updateData($this->dbConnection, advancedVerification, ['status', 'updatedAt'], ['Verified', $data['createdAt']], 'id', $accToken);
+            if ($updated) {
+                $advancedVerificationData = $this->gateway->fetchData(advancedVerification, ['id' => $accToken]);
+                $updateUSerKyc = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AdvancedVerification'], ['Verified'], 'accToken', $advancedVerificationData['userId']);
+                if ($updateUSerKyc) {
+                    $this->response->created("Advanced KYC has been approved for this user.");
+                } else {
+                    $this->response->unprocessableEntity('Advanced KYC has been disapproved');
+                }
+            } else {
+                $this->response->unprocessableEntity('Advanced KYC has been disapproved');
+            }
+        }
+    }
+    public function approveInstitution(string $accToken, array $data)
+    {
+        $createColumn = $this->createDbTables->createTable(institutionalVerification, ['status']);
+        if ($createColumn) {
+            $updated = $this->connectToDataBase->updateData($this->dbConnection, institutionalVerification, ['status', 'updatedAt'], ['Verified', $data['createdAt']], 'id', $accToken);
+            if ($updated) {
+                $institutionalVerificationData = $this->gateway->fetchData(institutionalVerification, ['id' => $accToken]);
+                $updateUSerKyc = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['InstitutionalVerification'], ['Verified'], 'accToken', $institutionalVerificationData['UserId']);
+                if ($updateUSerKyc) {
+                    $this->response->created("Institutional Verification has been approved for this user.");
+                } else {
+                    $this->response->unprocessableEntity('Institutional Verification has been disapproved');
+                }
+            } else {
+                $this->response->unprocessableEntity('Institutional Verification has been disapproved');
+            }
+        }
+    }
     public function approveKyc(string $accToken, array $data)
     {
-        var_dump($accToken);
         $createColumn = $this->createDbTables->createTable(idVer, ['status']);
         if ($createColumn) {
             $updated = $this->connectToDataBase->updateData($this->dbConnection, idVer, ['status', 'updatedAt'], ['Verified', $data['createdAt']], 'id', $accToken);
             if ($updated) {
-                // $this->response->created("KYC has been approved for this user.");  
-                $updateUSerKyc = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['BasicVerification'], ['Verified'], 'id', $accToken);
-            if ($updateUSerKyc) {
-                // $this->response->created("KYC has been approved for this user.");
+                $idVerificationData = $this->gateway->fetchData(idVer, ['id' => $accToken]);
+                $updateUSerKyc = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['BasicVerification'], ['Verified'], 'accToken', $idVerificationData['userId']);
+                if ($updateUSerKyc) {
+                    $this->response->created("KYC has been approved for this user.");
+                } else {
+                    $this->response->unprocessableEntity('KYC has been disapproved');
+                }
             } else {
                 $this->response->unprocessableEntity('KYC has been disapproved');
             }
+
+        }
+    }
+    public function disapproveAdvancedKyc(string $accToken, array $data)
+    {
+        $createColumn = $this->createDbTables->createTable(advancedVerification, ['status']);
+        if ($createColumn) {
+            $updated = $this->connectToDataBase->updateData($this->dbConnection, advancedVerification, ['status', 'updatedAt'], ['Disapproved', $data['createdAt']], 'id', $accToken);
+            if ($updated) {
+                $advancedVerificationData = $this->gateway->fetchData(advancedVerification, ['id' => $accToken]);
+                
+                $updateUSerKyc = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AdvancedVerification'], ['Disapproved'], 'accToken', $advancedVerificationData['userId']);
+                if ($updateUSerKyc) {
+                    $this->response->created("Advanced KYC has been disapproved for this user.");
+                }
             } else {
-                $this->response->unprocessableEntity('KYC has been disapproved');
+                $this->response->unprocessableEntity('Advanced KYC has been approved');
             }
-          
+        }
+    }
+    public function rejectInstitution(string $accToken, array $data)
+    {
+        $createColumn = $this->createDbTables->createTable(institutionalVerification, ['status']);
+        if ($createColumn) {
+            $updated = $this->connectToDataBase->updateData($this->dbConnection, institutionalVerification, ['status', 'updatedAt'], ['Disapproved', $data['createdAt']], 'id', $accToken);
+            if ($updated) {
+                $institutionalVerificationData = $this->gateway->fetchData(institutionalVerification, ['id' => $accToken]);
+                
+                $updateUSerKyc = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['institutionalVerification'], ['Disapproved'], 'accToken', $institutionalVerificationData['UserId']);
+                if ($updateUSerKyc) {
+                    $this->response->created("Institutional Verification has been disapproved for this user.");
+                }
+            } else {
+                $this->response->unprocessableEntity('Institutional Verification has been approved');
+            }
+        }
+    }
+    public function disapproveKyc(string $accToken, array $data)
+    {
+        $createColumn = $this->createDbTables->createTable(idVer, ['status']);
+        if ($createColumn) {
+            $updated = $this->connectToDataBase->updateData($this->dbConnection, idVer, ['status', 'updatedAt'], ['Disapproved', $data['createdAt']], 'id', $accToken);
+            if ($updated) {
+                $idVerificationData = $this->gateway->fetchData(idVer, ['id' => $accToken]);
+                $updateUSerKyc = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['BasicVerification'], ['Disapproved'], 'accToken', $idVerificationData['userId']);
+                if ($updateUSerKyc) {
+                    $this->response->created("KYC has been disapproved for this user.");
+                }
+            } else {
+                $this->response->unprocessableEntity('KYC has been approved');
+            }
+
         }
     }
 
@@ -129,17 +215,17 @@ class PatchGateway
     }
     public function updateNickname(array $data)
     {
-        
+
         $headers = apache_request_headers();
         $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
 
         if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
             return $this->response->unauthorized("Authorization header missing or invalid");
         }
-        $token = $matches[1]; 
+        $token = $matches[1];
         try {
             $decodedPayload = $this->jwtCodec->decode($token);
-            $userid =  $decodedPayload['sub'];
+            $userid = $decodedPayload['sub'];
             $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['username'], [$data['nickname']], 'id', $userid);
             if ($updated) {
                 $this->response->created("Username updated successfully");
@@ -158,21 +244,21 @@ class PatchGateway
         }
 
 
-      
+
     }
     public function updateLanguage(array $data)
     {
-        
+
         $headers = apache_request_headers();
         $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
 
         if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
             return $this->response->unauthorized("Authorization header missing or invalid");
         }
-        $token = $matches[1]; 
+        $token = $matches[1];
         try {
             $decodedPayload = $this->jwtCodec->decode($token);
-            $userid =  $decodedPayload['sub'];
+            $userid = $decodedPayload['sub'];
             $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['language'], [$data['language']], 'id', $userid);
             if ($updated) {
                 $this->response->created("Username updated successfully");
@@ -191,7 +277,7 @@ class PatchGateway
         }
 
 
-      
+
     }
     public function disableGoogleAuth()
     {
@@ -200,10 +286,10 @@ class PatchGateway
         if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
             return $this->response->unauthorized("Authorization header missing or invalid");
         }
-        $token = $matches[1]; 
+        $token = $matches[1];
         try {
             $decodedPayload = $this->jwtCodec->decode($token);
-            $userid =  $decodedPayload['sub'];
+            $userid = $decodedPayload['sub'];
             $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['isGoogleAUthEnabled'], [null], 'id', $userid);
             if ($updated) {
                 $this->response->created("true");
@@ -222,7 +308,7 @@ class PatchGateway
         }
 
 
-      
+
     }
 
 

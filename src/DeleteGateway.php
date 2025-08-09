@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/constants.php';
 
 class DeleteGateway
 {
@@ -49,6 +50,26 @@ class DeleteGateway
             return $this->response->success('this basic verification details has been has been deleted successfully');
         } else {
             $this->response->unprocessableEntity('could not delete basic verification details');
+        }
+
+    }
+    public function deleteAdvancedKyc($id)
+    {
+        $deletDeposit = $this->connectToDataBase->deleteData($this->dbConnection, advancedVerification, 'id', $id);
+        if ($deletDeposit) {
+            return $this->response->success('this Advanced verification details has been has been deleted successfully');
+        } else {
+            $this->response->unprocessableEntity('could not delete Advanced verification details');
+        }
+
+    }
+    public function deleteInstitution($id)
+    {
+        $deletDeposit = $this->connectToDataBase->deleteData($this->dbConnection, institutionalVerification, 'id', $id);
+        if ($deletDeposit) {
+            return $this->response->success('this Institutional Verification details has been has been deleted successfully');
+        } else {
+            $this->response->unprocessableEntity('could not delete Institutional Verification details');
         }
 
     }

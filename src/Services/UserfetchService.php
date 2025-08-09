@@ -36,6 +36,9 @@ class UserfetchService{
             case "generate2fa": 
                 $this->fetch->generate2Fa();
                 break;
+            case "getCoins": 
+                $this->fetch->getCoins();
+                break;
         }
     }
 }

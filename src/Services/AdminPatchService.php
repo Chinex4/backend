@@ -47,6 +47,21 @@ class AdminPatchService{
             case "approveKyc": 
                 $this->patch->approveKyc($accToken, $data);
                 break;
+            case "approveAdvancedKyc": 
+                $this->patch->approveAdvancedKyc($accToken, $data);
+                break;
+            case "approveInstitution": 
+                $this->patch->approveInstitution($accToken, $data);
+                break;
+            case "disapproveKyc": 
+                $this->patch->disapproveKyc($accToken, $data);
+                break;
+            case "disapproveAdvancedKyc": 
+                $this->patch->disapproveAdvancedKyc($accToken, $data);
+                break;
+            case "rejectInstitution": 
+                $this->patch->rejectInstitution($accToken, $data);
+                break;
             case "disableOtp": 
                 $this->patch->disableOtp($accToken);
                 break;

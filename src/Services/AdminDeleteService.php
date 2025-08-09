@@ -35,6 +35,12 @@ class AdminDeleteService{
             case "deleteKyc": 
                 $this->delete->deleteKyc($id);
                 break;
+            case "deleteAdvancedKyc": 
+                $this->delete->deleteAdvancedKyc($id);
+                break;
+            case "deleteInstitution": 
+                $this->delete->deleteInstitution($id);
+                break;
         }
     }
 }

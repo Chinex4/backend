@@ -95,23 +95,26 @@ class AuthUserService
         if ($result) {
             $id = $this->gateway->createForUserWithTypes($this->dbConnection, advancedVerification, $this->advancedVerifColumn, $bindingArrayforRegUser, $advancedData);
             if ($id) {
-                $notification = $this->gateway->createNotificationMessage(
-                    $userid,
-                    'Advanced Verification Submitted',
-                    'Thank you for submitting your proof of address. Our team will review it shortly.',
-                    $data['createdAt'] ?? date('Y-m-d H:i:s')
-                );
-                if ($notification) {
-                    $username = $user['name'];
-                    // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
-                    // if ($sent === true) {
-                    $response = ['status' => 'true'];
-                    $this->response->created($response);
-                    // } else {
+                $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['AdvancedVerification'], ['Pending'], 'id', $userid);
+                if ($updated) {
+                    $notification = $this->gateway->createNotificationMessage(
+                        $userid,
+                        'Advanced Verification Submitted',
+                        'Thank you for submitting your proof of address. Our team will review it shortly.',
+                        $data['createdAt'] ?? date('Y-m-d H:i:s')
+                    );
+                    if ($notification) {
+                        $username = $user['name'];
+                        // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
+                        // if ($sent === true) {
+                        $response = ['status' => 'true'];
+                        $this->response->created($response);
+                        // } else {
 
-                    //     $this->response->unprocessableEntity('could not send mail to user');
+                        //     $this->response->unprocessableEntity('could not send mail to user');
 
-                    // }
+                        // }
+                    }
                 }
             }
 
@@ -131,7 +134,7 @@ class AuthUserService
     }
     public function institutionalVerification(array $data = null, array $file)
     {
-      
+
         $headers = apache_request_headers();
         $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
 
@@ -142,41 +145,43 @@ class AuthUserService
         $token = $matches[1];
 
         try {
-        // Decode JWT token
-        $decodedPayload = $this->jwtCodec->decode($token);
-        $userid = $decodedPayload['sub'];
+            // Decode JWT token
+            $decodedPayload = $this->jwtCodec->decode($token);
+            $userid = $decodedPayload['sub'];
 
-        $user = $this->gateway->fetchData(RegTable, ['id' => $userid]);
-       
+            $user = $this->gateway->fetchData(RegTable, ['id' => $userid]);
 
-        $regdata = array_merge( $data, ['userId' => $user['accToken']]);
-        $institutionalVerificationData = $this->institutionalVerificationGenerator->generateDefaultData($regdata);
-        $result = $this->createDbTables->createTableWithTypes(institutionalVerification, $this->institutionalVerificationColumn);
-        $bindingArrayforRegUser = $this->gateway->generateRandomStrings($institutionalVerificationData);
-//   var_dump($institutionalVerificationData, $this->institutionalVerificationColumn);
-        if ($result) {
-            $id = $this->gateway->createForUserWithTypes($this->dbConnection, institutionalVerification, $this->institutionalVerificationColumn, $bindingArrayforRegUser, $institutionalVerificationData);
-            if ($id) {
-                $notification = $this->gateway->createNotificationMessage(
-                    $userid,
-                    'Advanced Verification Submitted',
-                    'Thank you for submitting your proof of address. Our team will review it shortly.',
-                    $data['createdAt'] ?? date('Y-m-d H:i:s')
-                );
-                if ($notification) {
-                    $username = $user['name'];
-                    // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
-                    // if ($sent === true) {
-                    $response = ['status' => 'true'];
-                    $this->response->created($response);
-                    // } else {
 
-                    //     $this->response->unprocessableEntity('could not send mail to user');
+            $regdata = array_merge($data, ['userId' => $user['accToken']]);
+            $institutionalVerificationData = $this->institutionalVerificationGenerator->generateDefaultData($regdata);
+            $result = $this->createDbTables->createTableWithTypes(institutionalVerification, $this->institutionalVerificationColumn);
+            $bindingArrayforRegUser = $this->gateway->generateRandomStrings($institutionalVerificationData); 
+            if ($result) {
+                $id = $this->gateway->createForUserWithTypes($this->dbConnection, institutionalVerification, $this->institutionalVerificationColumn, $bindingArrayforRegUser, $institutionalVerificationData);
+                if ($id) {
+                      $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['InstitutionalVerification'], ['Pending'], 'id', $userid);
+                if ($updated) {
+                    $notification = $this->gateway->createNotificationMessage(
+                        $userid,
+                        'Institutional Verification Submitted',
+                        'Thank you for submitting your Institutional Verifications. Our team will review it shortly.',
+                        $data['createdAt'] ?? date('Y-m-d H:i:s')
+                    );
+                    if ($notification) {
+                        $username = $user['name'];
+                        // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
+                        // if ($sent === true) {
+                        $response = ['status' => 'true'];
+                        $this->response->created($response);
+                        // } else {
 
-                    // }
+                        //     $this->response->unprocessableEntity('could not send mail to user');
+
+                        // }
+                    }
                 }
             }
-        }
+            }
 
         } catch (InvalidArgumentException $e) {
             return $this->response->unauthorized("Invalid token format.");
@@ -231,26 +236,29 @@ class AuthUserService
 
             if ($result) {
                 $id = $this->gateway->createForUserWithTypes($this->dbConnection, idVer, $this->KycColumn, $bindingArrayforRegUser, $kycData);
-                // if ($id) {
-                //     $notification = $this->gateway->createNotificationMessage(
-                //         $userid,
-                //         'Basic Verification Submitted',
-                //         'Thank you for submitting your basic verification. Our team will review it shortly.',
-                //         $data['createdAt']
-                //     );
-                //     if ($notification) {
-                //         $username = $user['name'];
-                //         // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
-                //         // if ($sent === true) {
-                //         $response = ['status' => 'true'];
-                //         $this->response->created($response);
-                //         // } else {
+                if ($id) {
+                      $updated = $this->connectToDataBase->updateData($this->dbConnection, RegTable, ['BasicVerification'], ['Pending'], 'id', $userid);
+                if ($updated) {
+                    $notification = $this->gateway->createNotificationMessage(
+                        $userid,
+                        'Basic Verification Submitted',
+                        'Thank you for submitting your basic verification. Our team will review it shortly.',
+                        $data['createdAt']
+                    );
+                    if ($notification) {
+                        $username = $user['name'];
+                        // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
+                        // if ($sent === true) {
+                        $response = ['status' => 'true'];
+                        $this->response->created($response);
+                        // } else {
 
-                //         //     $this->response->unprocessableEntity('could not send mail to user');
+                        //     $this->response->unprocessableEntity('could not send mail to user');
 
-                //         // }
-                //     }
-                // }
+                        // }
+                    }
+                }
+                }
 
             }
 
@@ -1067,50 +1075,50 @@ class AuthUserService
 
         $token = $matches[1];
 
-    //     try {
-    //         // Decode JWT token
-    //         $decodedPayload = $this->jwtCodec->decode($token);
-    //         $userid = $decodedPayload['sub'];
+        //     try {
+        //         // Decode JWT token
+        //         $decodedPayload = $this->jwtCodec->decode($token);
+        //         $userid = $decodedPayload['sub'];
 
-    //  $advancedData = $this->advancedVerifDataGenerator->generateDefaultData($regdata);
-    //     $result = $this->createDbTables->createTableWithTypes(advancedVerification, $this->advancedVerifColumn);
-    //     $bindingArrayforRegUser = $this->gateway->generateRandomStrings($advancedData);
+        //  $advancedData = $this->advancedVerifDataGenerator->generateDefaultData($regdata);
+        //     $result = $this->createDbTables->createTableWithTypes(advancedVerification, $this->advancedVerifColumn);
+        //     $bindingArrayforRegUser = $this->gateway->generateRandomStrings($advancedData);
 
-    //     if ($result) {
-    //         $id = $this->gateway->createForUserWithTypes($this->dbConnection, advancedVerification, $this->advancedVerifColumn, $bindingArrayforRegUser, $advancedData);
-    //         if ($id) {
-    //             $notification = $this->gateway->createNotificationMessage(
-    //                 $userid,
-    //                 '📄 Advanced Verification Submitted',
-    //                 'Thank you for submitting your proof of address. Our team will review it shortly.',
-    //                 $data['createdAt'] ?? date('Y-m-d H:i:s')
-    //             );
-    //             if ($notification) {
-    //                 $username = $user['name'];
-    //                 // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
-    //                 // if ($sent === true) {
-    //                 $response = ['status' => 'true'];
-    //                 $this->response->created($response);
-    //                 // } else {
+        //     if ($result) {
+        //         $id = $this->gateway->createForUserWithTypes($this->dbConnection, advancedVerification, $this->advancedVerifColumn, $bindingArrayforRegUser, $advancedData);
+        //         if ($id) {
+        //             $notification = $this->gateway->createNotificationMessage(
+        //                 $userid,
+        //                 '📄 Advanced Verification Submitted',
+        //                 'Thank you for submitting your proof of address. Our team will review it shortly.',
+        //                 $data['createdAt'] ?? date('Y-m-d H:i:s')
+        //             );
+        //             if ($notification) {
+        //                 $username = $user['name'];
+        //                 // $sent = $this->mailsender->sendOtpEmail($user['email'], $username, $EmailValData['verificationToken']);
+        //                 // if ($sent === true) {
+        //                 $response = ['status' => 'true'];
+        //                 $this->response->created($response);
+        //                 // } else {
 
-    //                 //     $this->response->unprocessableEntity('could not send mail to user');
+        //                 //     $this->response->unprocessableEntity('could not send mail to user');
 
-    //                 // }
-    //             }
-    //         }
+        //                 // }
+        //             }
+        //         }
 
-    //     }
-            
+        //     }
 
-    //     } catch (InvalidArgumentException $e) {
-    //         return $this->response->unauthorized("Invalid token format.");
-    //     } catch (InvalidSignatureException $e) {
-    //         return $this->response->unauthorized("Invalid token signature.");
-    //     } catch (TokenExpiredException $e) {
-    //         return $this->response->unauthorized("Token has expired.");
-    //     } catch (Exception $e) {
-    //         return $this->response->unauthorized("Token decode error: " . $e->getMessage());
-    //     }
+
+        //     } catch (InvalidArgumentException $e) {
+        //         return $this->response->unauthorized("Invalid token format.");
+        //     } catch (InvalidSignatureException $e) {
+        //         return $this->response->unauthorized("Invalid token signature.");
+        //     } catch (TokenExpiredException $e) {
+        //         return $this->response->unauthorized("Token has expired.");
+        //     } catch (Exception $e) {
+        //         return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+        //     }
     }
     public function setAntiPhishingCode($data)
     {
@@ -1128,13 +1136,13 @@ class AuthUserService
             $decodedPayload = $this->jwtCodec->decode($token);
             $userid = $decodedPayload['sub'];
 
-            $createColumn = $this->createDbTables->createTable(RegTable, ['setAntiPhishingCode']);
+            $createColumn = $this->createDbTables->createTable(RegTable, ['antiPhishingCode']);
             if ($createColumn) {
                 // Store anti-phishing code in DB
                 $updated = $this->connectToDataBase->updateData(
                     $this->dbConnection,
                     RegTable,
-                    ['setAntiPhishingCode'],
+                    ['antiPhishingCode'],
                     [$data['code']],
                     'id',
                     $userid
