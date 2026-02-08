@@ -1,6 +1,15 @@
 <?php
 declare(strict_types=1);
 
+ob_start();
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+ini_set('log_errors', '1');
+
+// set a real writable log file (important)
+ini_set('error_log', __DIR__ . '/php-error.log');
+
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
 
 header("Access-Control-Allow-Origin: $origin"); // Reflects the origin
