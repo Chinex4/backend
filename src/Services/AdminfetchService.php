@@ -44,6 +44,15 @@ class AdminfetchService{
             case "fetchWallets": 
                 $this->fetch->fetchWallets();
                 break;
+            case "deposits": 
+                $this->fetch->getDeposits();
+                break;
+            case "p2pTraders": 
+                $this->fetch->getP2PTraders();
+                break;
+            case "p2pOrders":
+                $this->fetch->getP2POrders();
+                break;
         }
     }
 }

@@ -62,6 +62,12 @@ class AdminPatchService{
             case "rejectInstitution": 
                 $this->patch->rejectInstitution($accToken, $data);
                 break;
+            case "disapproveDeposit": 
+                $this->patch->disapproveDeposit($accToken, $data);
+                break;
+            case "approveDeposit": 
+                $this->patch->approveDeposit($accToken, $data);
+                break;
             case "disableOtp": 
                 $this->patch->disableOtp($accToken);
                 break;

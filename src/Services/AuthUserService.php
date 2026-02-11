@@ -34,6 +34,8 @@ class AuthUserService
     private $KycColumn;
     private $advancedVerifColumn;
     private $institutionalVerificationColumn;
+    private $depositColumn;
+    private $p2pOrderColumn;
 
     public function __construct($pdoConnection)
     {
@@ -44,6 +46,8 @@ class AuthUserService
         $this->ForgotPasswordColumns = require __DIR__ . '/../Config/ForgotPasswordColumns.php';
         $this->advancedVerifColumn = require __DIR__ . '/../Config/advancedVerifColumn.php';
         $this->institutionalVerificationColumn = require __DIR__ . '/../Config/institutionalVerificationColumn.php';
+        $this->depositColumn = require __DIR__ . '/../Config/DepositColumn.php';
+        $this->p2pOrderColumn = require __DIR__ . '/../Config/P2POrderColumn.php';
         $this->gateway = new TaskGatewayFunction($this->dbConnection);
         $this->userDataGenerator = new UserDataGenerator($this->gateway);
         $this->EmailDataGenerator = new EmailDataGenerator($this->gateway);
@@ -213,6 +217,12 @@ class AuthUserService
             $userid = $decodedPayload['sub'];
 
             $user = $this->gateway->fetchData(RegTable, ['id' => $userid]);
+            if (!$user || !is_array($user)) {
+                return $this->response->unprocessableEntity('User not found.');
+            }
+            if (!isset($file['frontImage'], $file['backImage'])) {
+                return $this->response->unprocessableEntity('Front and back images are required.');
+            }
             $frontImage = $this->gateway->processImageWithgivenNameFiles($file['frontImage']);
             if (is_array($frontImage) || !is_string($frontImage) || empty($frontImage)) {
                 return $this->response->unprocessableEntity('Invalid or failed to process front image.');
@@ -243,7 +253,7 @@ class AuthUserService
                         $userid,
                         'Basic Verification Submitted',
                         'Thank you for submitting your basic verification. Our team will review it shortly.',
-                        $data['createdAt']
+                        $data['createdAt'] ?? date('Y-m-d H:i:s')
                     );
                     if ($notification) {
                         $username = $user['name'];
@@ -256,10 +266,14 @@ class AuthUserService
                         //     $this->response->unprocessableEntity('could not send mail to user');
 
                         // }
+                        return;
                     }
                 }
                 }
 
+                return $this->response->unprocessableEntity('Could not save verification data.');
+            } else {
+                return $this->response->unprocessableEntity('Could not create verification table.');
             }
 
         } catch (InvalidArgumentException $e) {
@@ -275,6 +289,148 @@ class AuthUserService
 
     }
 
+    public function deposit(array $data)
+    {
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+
+        $token = $matches[1];
+
+        try {
+            $decodedPayload = $this->jwtCodec->decode($token);
+            $userid = $decodedPayload['sub'];
+
+            $user = $this->gateway->fetchData(RegTable, ['id' => $userid]);
+            if (!$user || !is_array($user)) {
+                return $this->response->unprocessableEntity('User not found.');
+            }
+
+            $depositData = [
+                'symbol' => $data['symbol'] ?? null,
+                'network' => $data['network'] ?? null,
+                'address' => $data['address'] ?? null,
+                'amount_usd' => $data['amount_usd'] ?? null,
+                'coin_amount' => $data['coin_amount'] ?? null,
+                'account' => $data['account'] ?? null,
+                'price_usd' => $data['price_usd'] ?? null,
+                'createdAt' => $data['createdAt'] ?? date('Y-m-d H:i:s'),
+                'userId' => $user['accToken'],
+                'depositId' => $this->gateway->generateRandomCode(),
+                'status' => 'Pending',
+                'updatedAt' => null,
+                'ipAddress' => $this->gateway->getIPAddress(),
+                'reviewedAt' => null,
+                'confirmedAt' => null,
+                'confirmations' => 0,
+            ];
+
+            $createDepositTable = $this->createDbTables->createTableWithTypes(deposit, $this->depositColumn);
+            if (!$createDepositTable) {
+                return $this->response->unprocessableEntity('Could not create deposit table.');
+            }
+
+            $depositBinding = $this->gateway->generateRandomStrings($depositData);
+            $insertDeposit = $this->connectToDataBase->insertDataWithTypes(
+                $this->dbConnection,
+                deposit,
+                $this->depositColumn,
+                $depositBinding,
+                $depositData
+            );
+
+            if (!$insertDeposit) {
+                return $this->response->unprocessableEntity('Could not insert deposit record.');
+            }
+
+            $this->gateway->createNotificationMessage(
+                $userid,
+                'Deposit Submitted',
+                'Your deposit has been submitted and is being processed.',
+                $depositData['createdAt'] ?? date('Y-m-d H:i:s')
+            );
+            return $this->response->created('Deposit submitted successfully.');
+
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unprocessableEntity("Token decode error: " . $e->getMessage());
+        }
+    }
+    public function createOrder(array $data)
+    {
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+
+        $token = $matches[1];
+
+        try {
+            $decodedPayload = $this->jwtCodec->decode($token);
+            $userid = $decodedPayload['sub'];
+
+            $orderId = (string) random_int(1000000000, 9999999999);
+            $createdAt = $data['createdAt'] ?? date('Y-m-d H:i:s');
+            $orderData = [
+                'adType' => $data['adType'] ?? null,
+                'coin' => $data['coin'] ?? null,
+                'fiat' => $data['fiat'] ?? null,
+                'fiatAmount' => $data['fiatAmount'] ?? null,
+                'cryptoAmount' => $data['cryptoAmount'] ?? null,
+                'price' => $data['price'] ?? null,
+                'paymentMethod' => $data['paymentMethod'] ?? null,
+                'merchant' => $data['merchant'] ?? null,
+                'orders' => isset($data['orders']) ? (int) $data['orders'] : 0,
+                'completion' => $data['completion'] ?? null,
+                'limitRange' => $data['limit'] ?? null,
+                'quantity' => $data['quantity'] ?? null,
+                'userId' => $userid,
+                'orderId' => $orderId,
+                'status' => 'Pending',
+                'createdAt' => $createdAt,
+                'updatedAt' => null,
+            ];
+
+            $createTable = $this->createDbTables->createTableWithTypes(p2p_orders, $this->p2pOrderColumn);
+            if (!$createTable) {
+                return $this->response->unprocessableEntity('Could not create P2P order table.');
+            }
+
+            $bindingArray = $this->gateway->generateRandomStrings($orderData);
+            $inserted = $this->connectToDataBase->insertDataWithTypes(
+                $this->dbConnection,
+                p2p_orders,
+                $this->p2pOrderColumn,
+                $bindingArray,
+                $orderData
+            );
+
+            if (!$inserted) {
+                return $this->response->unprocessableEntity('Could not save order.');
+            }
+
+            return $this->response->created(['message' => 'Order created successfully.', 'orderId' => $orderId]);
+
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unprocessableEntity("Token decode error: " . $e->getMessage());
+        }
+    }
     public function registerUser(array $data)
     {
         $defaultData = $this->userDataGenerator->generateDefaultData($data);
@@ -290,6 +446,7 @@ class AuthUserService
                 $this->response->unprocessableEntity('This email already exists. try another.');
             } else {
                 $bindingArrayforRegUser = $this->gateway->generateRandomStrings($regdata);
+               
                 $id = $this->gateway->createForUserWithTypes($this->dbConnection, RegTable, $this->regUsercolumns, $bindingArrayforRegUser, $regdata);
                 if ($id) {
                     $fetchUser = $this->gateway->fetchDataWithId(RegTable, $id);

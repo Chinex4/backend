@@ -1,15 +1,6 @@
 <?php
 declare(strict_types=1);
 
-ob_start();
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-ini_set('log_errors', '1');
-
-// set a real writable log file (important)
-ini_set('error_log', __DIR__ . '/php-error.log');
-
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
 
 header("Access-Control-Allow-Origin: $origin"); // Reflects the origin
@@ -31,7 +22,19 @@ $resource = $parts[3];
 $type = $parts[4];
 $action = $parts[5];
 $id = $parts[6] ?? null;
-if ($resource != "task") {
+
+if ($resource === "user") {
+    $type = "user";
+    $action = $parts[4] ?? null;
+    $id = $parts[5] ?? null;
+    if ($action === "getorder" && $id) {
+        $_GET['orderId'] = $id;
+    }
+} elseif ($resource === "task") {
+    if ($action === "getorder" && $id) {
+        $_GET['orderId'] = $id;
+    }
+} elseif ($resource !== "task") {
     http_response_code(404);
     exit;
 }

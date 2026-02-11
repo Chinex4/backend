@@ -27,6 +27,9 @@ class AdminPostService{
             case "resendVerification":
                 $this->adminauthservice->resendVerification($data);
                 break;
+            case "addP2PTrader":
+                $this->adminauthservice->addP2PTrader($data);
+                break;
         }
     }
 }

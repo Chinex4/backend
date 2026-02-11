@@ -82,10 +82,10 @@ class TaskController
         echo json_encode(['error' => 'Invalid POST type']);
     }
 
-    private function handleGet($gateway, $type, $action, $id): void
+    private function handleGet($gateway, $type, $action, ?string $id): void
     {
         if ($type === 'user') {
-            $gateway->handleFetch($action);
+            $gateway->handleFetch($action, $id);
             return;
         }
         if ($type === 'admin') {

@@ -73,4 +73,14 @@ class DeleteGateway
         }
 
     }
+    public function deleteDeposit($id)
+    {
+        $deletDeposit = $this->connectToDataBase->deleteData($this->dbConnection, deposit, 'id', $id);
+        if ($deletDeposit) {
+            return $this->response->success('this deposit has been deleted successfully');
+        } else {
+            $this->response->unprocessableEntity('could not delete deposit');
+        }
+
+    }
 }

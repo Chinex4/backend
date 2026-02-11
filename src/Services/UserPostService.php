@@ -89,6 +89,12 @@ class UserPostService
             case "disableAccount":
                 $this->authService->disableAccount();
                 break;
+            case "deposit":
+                $this->authService->deposit($data);
+                break;
+            case "createorder":
+                $this->authService->createOrder($data);
+                break;
 
         }
     }

@@ -41,6 +41,9 @@ class AdminDeleteService{
             case "deleteInstitution": 
                 $this->delete->deleteInstitution($id);
                 break;
+            case "deleteDeposit": 
+                $this->delete->deleteDeposit($id);
+                break;
         }
     }
 }

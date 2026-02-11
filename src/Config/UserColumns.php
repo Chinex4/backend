@@ -36,11 +36,15 @@ return [
     'sendKyc' => 'VARCHAR(200) DEFAULT NULL',
     'SignalMessage' => 'TEXT DEFAULT NULL',
     'kyc' => 'TEXT DEFAULT NULL',
-    'encryptedPassword' => 'VARCHAR(255) NOT NULL', 
+    'encryptedPassword' => 'VARCHAR(255) NOT NULL',
     'userAgent' => 'VARCHAR(255) DEFAULT NULL',
     'deviceType' => 'VARCHAR(100) DEFAULT NULL',
     'lastLogin' => 'VARCHAR(50) DEFAULT NULL',
-    'tokenRevoked' => 'VARCHAR(10) DEFAULT "false"', 
-    'allowOtp' => 'VARCHAR(100) DEFAULT "false"', 
+    'tokenRevoked' => 'VARCHAR(10) DEFAULT "false"',
+    'allowOtp' => 'VARCHAR(100) DEFAULT "false"',
+    'balances_json' => 'JSON DEFAULT (JSON_ARRAY())',
+    'tokenExpiry' => 'VARCHAR(100) DEFAULT NULL',
+    'refreshToken' => 'VARCHAR(255) DEFAULT NULL',
+    'totp_secret' => 'VARCHAR(255) DEFAULT NULL',
 
 ];

@@ -31,9 +31,9 @@ class UserGateway
     {
         $this->post->handlePost($action, $data, $file);
     }
-    public function handleFetch(string $action): void
+    public function handleFetch(string $action, ?string $id = null): void
     {
-        $this->fetch->handleFetch($action);
+        $this->fetch->handleFetch($action, $id);
     }
     public function handlePut(string $action): void
     {

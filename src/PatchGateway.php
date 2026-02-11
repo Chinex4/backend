@@ -143,6 +143,117 @@ class PatchGateway
 
         }
     }
+    public function disapproveDeposit(string $accToken, array $data)
+    {
+        $createColumn = $this->createDbTables->createTable(deposit, ['status', 'updatedAt', 'reviewedAt']);
+        if ($createColumn) {
+            $date = $data['actionDate'] ?? date('Y-m-d H:i:s');
+            $updated = $this->connectToDataBase->updateData(
+                $this->dbConnection,
+                deposit,
+                ['status', 'updatedAt', 'reviewedAt'],
+                ['Disapproved', $date, $date],
+                'id',
+                $accToken
+            );
+            if ($updated) {
+                $depositData = $this->gateway->fetchData(deposit, ['id' => $accToken]);
+                if ($depositData && isset($depositData['userId'])) {
+                    $user = $this->gateway->fetchData(RegTable, ['accToken' => $depositData['userId']]);
+                    if ($user && isset($user['id'])) {
+                        $this->gateway->createNotificationMessage(
+                            $user['id'],
+                            'Deposit Disapproved',
+                            'Your deposit has been disapproved. Please contact support for more information.',
+                            $date
+                        );
+                    }
+                }
+                $this->response->created("Deposit has been disapproved for this user.");
+            } else {
+                $this->response->unprocessableEntity('Deposit has been approved');
+            }
+        }
+    }
+    public function approveDeposit(string $accToken, array $data)
+    {
+        $createColumn = $this->createDbTables->createTable(deposit, ['status', 'updatedAt', 'reviewedAt', 'confirmedAt']);
+        if ($createColumn) {
+            $date = $data['actionDate'] ?? date('Y-m-d H:i:s');
+            $updated = $this->connectToDataBase->updateData(
+                $this->dbConnection,
+                deposit,
+                ['status', 'updatedAt', 'reviewedAt', 'confirmedAt'],
+                ['Approved', $date, $date, $date],
+                'id',
+                $accToken
+            );
+            if ($updated) {
+                $depositData = $this->gateway->fetchData(deposit, ['id' => $accToken]);
+                if ($depositData && isset($depositData['userId'])) {
+                    $user = $this->gateway->fetchData(RegTable, ['accToken' => $depositData['userId']]);
+                    if ($user && isset($user['id'])) {
+                        $balances = [];
+                        if (!empty($user['balances_json'])) {
+                            $decodedBalances = json_decode($user['balances_json'], true);
+                            if (is_array($decodedBalances)) {
+                                $balances = $decodedBalances;
+                            }
+                        }
+
+                        $network = $depositData['network'] ?? null;
+                        $amountUsd = isset($depositData['amount_usd']) ? (float) $depositData['amount_usd'] : 0;
+                        $coinAmount = $depositData['coin_amount'] ?? 0;
+
+                        if ($network) {
+                            $found = false;
+                            foreach ($balances as $index => $item) {
+                                if (isset($item['id']) && $item['id'] === $network) {
+                                    $currentBalance = isset($item['balance']) ? (float) $item['balance'] : 0;
+                                    $balances[$index]['balance'] = $currentBalance + $amountUsd;
+                                    $balances[$index]['price'] = $coinAmount;
+                                    $found = true;
+                                    break;
+                                }
+                            }
+                            if (!$found) {
+                                $balances[] = [
+                                    'id' => $network,
+                                    'balance' => $amountUsd,
+                                    'price' => $coinAmount,
+                                ];
+                            }
+                        }
+
+                        $totalAsset = isset($user['totalAsset']) ? (float) $user['totalAsset'] : 0;
+                        $spotAccount = isset($user['spotAccount']) ? (float) $user['spotAccount'] : 0;
+
+                        $newTotalAsset = $totalAsset + $amountUsd;
+                        $newSpotAccount = $spotAccount + $amountUsd;
+
+                        $this->connectToDataBase->updateData(
+                            $this->dbConnection,
+                            RegTable,
+                            ['totalAsset', 'spotAccount', 'balances_json'],
+                            [$newTotalAsset, $newSpotAccount, json_encode($balances, JSON_UNESCAPED_SLASHES)],
+                            'id',
+                            $user['id']
+                        );
+
+                        $this->gateway->createNotificationMessage(
+                            $user['id'],
+                            'Deposit Approved',
+                            'Your deposit has been approved and credited to your account.',
+                            $date
+                        );
+                    }
+                }
+                $this->response->created("Deposit has been approved for this user.");
+            } else {
+                $this->response->unprocessableEntity('Deposit has been disapproved');
+            }
+        }
+    }
 
     public function enableOtp(string $accToken)
     {

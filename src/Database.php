@@ -210,6 +210,7 @@ class Database
     public function insertDataWithTypes(PDO $pdo, string $tableName, array $columns, array $bindingArray, array $data)
     {
         // var_dump($columns,$data);
+        // var_dump(count($columns),count($data));
 
         // Validate: column count and data count must match
         if (count($columns) !== count($data)) {

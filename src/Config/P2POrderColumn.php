@@ -1,0 +1,20 @@
+<?php
+return [
+    'adType' => 'VARCHAR(10) DEFAULT NULL',
+    'coin' => 'VARCHAR(20) DEFAULT NULL',
+    'fiat' => 'VARCHAR(10) DEFAULT NULL',
+    'fiatAmount' => 'VARCHAR(50) DEFAULT NULL',
+    'cryptoAmount' => 'VARCHAR(50) DEFAULT NULL',
+    'price' => 'VARCHAR(50) DEFAULT NULL',
+    'paymentMethod' => 'VARCHAR(100) DEFAULT NULL',
+    'merchant' => 'VARCHAR(100) DEFAULT NULL',
+    'orders' => 'INT(11) DEFAULT 0',
+    'completion' => 'VARCHAR(10) DEFAULT NULL',
+    'limitRange' => 'VARCHAR(50) DEFAULT NULL',
+    'quantity' => 'VARCHAR(50) DEFAULT NULL',
+    'userId' => 'VARCHAR(50) DEFAULT NULL',
+    'orderId' => 'VARCHAR(20) DEFAULT NULL',
+    'status' => 'VARCHAR(20) DEFAULT "Pending"',
+    'createdAt' => 'VARCHAR(50) DEFAULT NULL',
+    'updatedAt' => 'VARCHAR(50) DEFAULT NULL',
+];

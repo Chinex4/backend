@@ -35,6 +35,15 @@ class AdminPutService{
             case "updateWallet": 
                 $this->put->updateWallet( $data,  $accToken);
                 break;
+            case "updateUserBalances": 
+                $this->put->updateUserBalances( $data,  $accToken);
+                break;
+            case "updateDeposit": 
+                $this->put->updateDeposit( $data,  $accToken);
+                break;
+            case "p2pTraders": 
+                $this->put->updateP2PTrader( $data,  $accToken);
+                break;
         }
     }
 }

@@ -26,7 +26,7 @@ class UserfetchService{
         $this->pdovar = null;
     }
 
-    public function handleFetch(string $action): void
+    public function handleFetch(string $action, ?string $id): void
     {
         switch ($action) {
             case "fetchUser": 
@@ -38,6 +38,13 @@ class UserfetchService{
                 break;
             case "getCoins": 
                 $this->fetch->getCoins();
+                break;
+            case "p2pUsers": 
+                $this->fetch->getP2PTradersPublic();
+                break;
+             
+            case "getorder": 
+                $this->fetch->getP2POrder($id);
                 break;
         }
     }
