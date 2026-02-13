@@ -39,8 +39,17 @@ class UserfetchService{
             case "getCoins": 
                 $this->fetch->getCoins();
                 break;
+            case "fetchBalance":
+                $this->fetch->fetchBalance();
+                break;
             case "p2pUsers": 
                 $this->fetch->getP2PTradersPublic();
+                break;
+            case "p2pUsersPublic":
+                $this->fetch->getP2PTradersPublicOpen();
+                break;
+            case "p2pAssets":
+                $this->fetch->getP2PAssets();
                 break;
              
             case "getorder": 

@@ -108,8 +108,10 @@ class TaskController
                 $jsonInput = json_decode($rawInput, true);
                 $data = !empty($jsonInput)
                     ? $jsonInput
-                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
-                $gateway->handleUserPut($action, $data, $id);
+                    : (!empty($_POST)
+                        ? $_POST
+                        : (json_decode(file_get_contents('php://input'), true) ?? []));
+                $gateway->handleUserPut($action, $data ?? [], $id, $_FILES ?? null);
                 return;
             }
             if ($type === 'admin') {
@@ -135,8 +137,10 @@ class TaskController
                 $jsonInput = json_decode($rawInput, true);
                 $data = !empty($jsonInput)
                     ? $jsonInput
-                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
-                $gateway->handleUserPatch($action, $data, $id);
+                    : (!empty($_POST)
+                        ? $_POST
+                        : (json_decode(file_get_contents('php://input'), true) ?? []));
+                $gateway->handlePatch($action, $data);
                 return;
             }
             if ($type === 'admin') {
@@ -154,7 +158,9 @@ class TaskController
                 $jsonInput = json_decode($rawInput, true);
                 $data = !empty($jsonInput)
                     ? $jsonInput
-                    : (!empty($_POST) ? $_POST : json_decode(file_get_contents('php://input'), true));
+                    : (!empty($_POST)
+                        ? $_POST
+                        : (json_decode(file_get_contents('php://input'), true) ?? []));
                 $gateway->handlePatch($action, $data);
                 return;
             }

@@ -83,4 +83,14 @@ class DeleteGateway
         }
 
     }
+
+    public function deleteP2POrder($id)
+    {
+        $deleted = $this->connectToDataBase->deleteData($this->dbConnection, p2p_orders, 'orderId', $id);
+        if ($deleted) {
+            return $this->response->success('this p2p order has been deleted successfully');
+        } else {
+            $this->response->unprocessableEntity('could not delete p2p order');
+        }
+    }
 }

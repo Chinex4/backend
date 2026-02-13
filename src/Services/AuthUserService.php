@@ -36,6 +36,7 @@ class AuthUserService
     private $institutionalVerificationColumn;
     private $depositColumn;
     private $p2pOrderColumn;
+    private $patchGateway;
 
     public function __construct($pdoConnection)
     {
@@ -61,6 +62,7 @@ class AuthUserService
         $key = $_ENV['SECRET_KEY'];
         $this->jwtCodec = new JWTCodec($key);
         $this->refreshTokenGateway = new RefreshTokenGateway($pdoConnection, $key);
+        $this->patchGateway = new PatchGateway($this->dbConnection);
     }
 
     public function __destruct()
@@ -381,14 +383,104 @@ class AuthUserService
 
             $orderId = (string) random_int(1000000000, 9999999999);
             $createdAt = $data['createdAt'] ?? date('Y-m-d H:i:s');
+
+            $adType = $data['adType'] ?? null;
+            $coinSymbol = $data['coin'] ?? null;
+            $finalCryptoAmount = $data['cryptoAmount'] ?? null;
+            $finalFiatAmount = $data['fiatAmount'] ?? null;
+            $reservedAmount = null;
+            $price = isset($data['price']) ? (float) $data['price'] : null;
+
+            if ($adType === 'sell') {
+                if (!$coinSymbol) {
+                    return $this->response->unprocessableEntity('coin is required.');
+                }
+
+                $coinId = $this->resolveCoinId($coinSymbol);
+                if (!$coinId) {
+                    return $this->response->unprocessableEntity('Unsupported coin.');
+                }
+
+                $user = $this->gateway->fetchData(RegTable, ['id' => $userid]);
+                if (!$user || !is_array($user)) {
+                    return $this->response->unprocessableEntity('User not found.');
+                }
+
+                $balances = [];
+                if (!empty($user['balances_json'])) {
+                    $decodedBalances = json_decode($user['balances_json'], true);
+                    if (is_array($decodedBalances)) {
+                        $balances = $decodedBalances;
+                    }
+                }
+
+                $availableBalance = 0.0;
+                foreach ($balances as $item) {
+                    if (isset($item['id']) && $item['id'] === $coinId) {
+                        $availableBalance = isset($item['balance']) ? (float) $item['balance'] : 0.0;
+                        break;
+                    }
+                }
+
+                $cryptoAmount = isset($data['cryptoAmount']) ? (float) $data['cryptoAmount'] : null;
+                $fiatAmount = isset($data['fiatAmount']) ? (float) $data['fiatAmount'] : null;
+
+                if ($cryptoAmount === null && $fiatAmount !== null && $price) {
+                    $cryptoAmount = $fiatAmount / $price;
+                }
+
+                if ($cryptoAmount === null) {
+                    return $this->response->unprocessableEntity('cryptoAmount or fiatAmount is required.');
+                }
+
+                if ($cryptoAmount > $availableBalance) {
+                    return $this->response->unprocessableEntity('Insufficient balance.');
+                }
+
+                $reservedAmount = (string) $cryptoAmount;
+                $finalCryptoAmount = $cryptoAmount;
+                $finalFiatAmount = $fiatAmount;
+
+                $detailsPayload = $data['paymentDetails'] ?? $data['userPaymentDetails'] ?? null;
+                if (isset($data['paymentMethod']) || $detailsPayload !== null) {
+                    $createUserColumns = $this->createDbTables->createTable(RegTable, ['p2pPaymentMethod', 'p2pPaymentDetails']);
+                    if ($createUserColumns) {
+                        if (is_array($detailsPayload) || is_object($detailsPayload)) {
+                            $detailsPayload = json_encode($detailsPayload, JSON_UNESCAPED_SLASHES);
+                        }
+                        $this->connectToDataBase->updateData(
+                            $this->dbConnection,
+                            RegTable,
+                            ['p2pPaymentMethod', 'p2pPaymentDetails'],
+                            [$data['paymentMethod'] ?? null, $detailsPayload],
+                            'id',
+                            $userid
+                        );
+                    }
+                }
+            }
+
+            if ($price !== null && $price > 0 && $finalCryptoAmount !== null) {
+                $computedFiat = round(((float) $finalCryptoAmount) * $price, 2);
+                $finalFiatAmount = number_format($computedFiat, 2, '.', '');
+            }
+
             $orderData = [
-                'adType' => $data['adType'] ?? null,
-                'coin' => $data['coin'] ?? null,
+                'adType' => $adType,
+                'coin' => $coinSymbol,
                 'fiat' => $data['fiat'] ?? null,
-                'fiatAmount' => $data['fiatAmount'] ?? null,
-                'cryptoAmount' => $data['cryptoAmount'] ?? null,
+                'fiatAmount' => $finalFiatAmount,
+                'cryptoAmount' => $finalCryptoAmount,
                 'price' => $data['price'] ?? null,
                 'paymentMethod' => $data['paymentMethod'] ?? null,
+                'paymentMethods' => isset($data['paymentMethods'])
+                    ? (is_string($data['paymentMethods']) ? $data['paymentMethods'] : json_encode($data['paymentMethods'], JSON_UNESCAPED_SLASHES))
+                    : null,
+                'paymentDetails' => isset($data['paymentDetails']) || isset($data['userPaymentDetails'])
+                    ? (is_string($data['paymentDetails'] ?? $data['userPaymentDetails'])
+                        ? ($data['paymentDetails'] ?? $data['userPaymentDetails'])
+                        : json_encode(($data['paymentDetails'] ?? $data['userPaymentDetails']), JSON_UNESCAPED_SLASHES))
+                    : null,
                 'merchant' => $data['merchant'] ?? null,
                 'orders' => isset($data['orders']) ? (int) $data['orders'] : 0,
                 'completion' => $data['completion'] ?? null,
@@ -397,6 +489,12 @@ class AuthUserService
                 'userId' => $userid,
                 'orderId' => $orderId,
                 'status' => 'Pending',
+                'userRelease' => null,
+                'reservedAmount' => $reservedAmount,
+                'confirmedAt' => null,
+                'releasedAt' => null,
+                'uploadedImages' => null,
+                'paymentTiming' => null,
                 'createdAt' => $createdAt,
                 'updatedAt' => null,
             ];
@@ -430,6 +528,19 @@ class AuthUserService
         } catch (Exception $e) {
             return $this->response->unprocessableEntity("Token decode error: " . $e->getMessage());
         }
+    }
+
+    public function confirmP2POrder(array $data, array $file = []): void
+    {
+        $payload = $data;
+        if (isset($data['payload']) && is_string($data['payload'])) {
+            $decoded = json_decode($data['payload'], true);
+            if (is_array($decoded)) {
+                $payload = array_merge($data, $decoded);
+            }
+        }
+        $orderId = $payload['orderId'] ?? '';
+        $this->patchGateway->confirmP2POrder($payload ?? [], (string) $orderId, $file ?? []);
     }
     public function registerUser(array $data)
     {
@@ -561,6 +672,32 @@ class AuthUserService
         } catch (\Throwable $e) {
             $this->response->unprocessableEntity($e->getMessage());
         }
+    }
+
+    private function resolveCoinId(string $symbol): ?string
+    {
+        $symbol = strtoupper(trim($symbol));
+
+        $walletRow = $this->gateway->fetchData(wallet, ['symbol' => $symbol]);
+        if (is_array($walletRow) && !empty($walletRow['coin_id'])) {
+            return $walletRow['coin_id'];
+        }
+
+        $fallback = [
+            'BTC' => 'bitcoin',
+            'ETH' => 'ethereum',
+            'USDT' => 'tether',
+            'USDC' => 'usd-coin',
+            'XRP' => 'ripple',
+            'BNB' => 'binancecoin',
+            'SOL' => 'solana',
+            'TRX' => 'tron',
+            'DOGE' => 'dogecoin',
+            'BCH' => 'bitcoin-cash',
+            'ADA' => 'cardano',
+        ];
+
+        return $fallback[$symbol] ?? null;
     }
     public function generateChangePasswordOtp(array $data)
     {

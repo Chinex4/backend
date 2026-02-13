@@ -30,4 +30,12 @@ class UserPutService{
                 break;
         }
     }
+
+    public function handleUserPut(string $action, ?array $data, string $id, $file = null): void
+    {
+        switch ($action) {
+            default:
+                break;
+        }
+    }
 }

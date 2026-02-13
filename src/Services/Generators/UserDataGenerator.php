@@ -66,6 +66,8 @@ class UserDataGenerator
 
     // keep balances_json BEFORE extras (exactly like your first list)
     'balances_json' => fn() => json_encode($this->buildDefaultBalances(), JSON_UNESCAPED_SLASHES),
+    'p2pPaymentMethod' => null,
+    'p2pPaymentDetails' => null,
     'tokenExpiry' => null,
     'refreshToken' => null,
     'totp_secret' => null,

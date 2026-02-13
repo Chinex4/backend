@@ -95,6 +95,9 @@ class UserPostService
             case "createorder":
                 $this->authService->createOrder($data);
                 break;
+            case "confirmorder":
+                $this->authService->confirmP2POrder($data ?? [], $file ?? []);
+                break;
 
         }
     }

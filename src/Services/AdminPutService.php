@@ -44,6 +44,9 @@ class AdminPutService{
             case "p2pTraders": 
                 $this->put->updateP2PTrader( $data,  $accToken);
                 break;
+            case "p2pOrders":
+                $this->put->updateP2POrder($data, $accToken);
+                break;
         }
     }
 }

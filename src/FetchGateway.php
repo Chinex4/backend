@@ -89,8 +89,7 @@ class FetchGateway
                     'referralBonus',
                     'Message',
                     'allowMessage',
-                    'allowOtp',
-                    'isGoogleAUthEnabled',
+                    'allowOtp', 
                     'balances_json',
                     'userAgent',
                     'deviceType',
@@ -176,6 +175,45 @@ class FetchGateway
         return $this->response->success($traders);
 
     }
+
+    public function fetchBalance()
+    {
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+
+        $token = $matches[1];
+        try {
+            $decodedPayload = $this->jwtCodec->decode($token);
+            $user = $this->gateway->fetchData(RegTable, ['id' => $decodedPayload['sub']]);
+            if (!$user || !is_array($user)) {
+                return $this->response->unprocessableEntity('User not found.');
+            }
+
+            $balances = [];
+            if (!empty($user['balances_json'])) {
+                $decodedBalances = json_decode($user['balances_json'], true);
+                if (is_array($decodedBalances)) {
+                    $balances = $decodedBalances;
+                }
+            }
+
+            return $this->response->success([
+                'balances' => $balances,
+            ]);
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+        }
+    }
     public function getP2POrders()
     {
         $orders = $this->gateway->fetchAllData(p2p_orders);
@@ -207,6 +245,50 @@ class FetchGateway
                 }
             }
             return $this->response->success($traders);
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unauthorized("Token decode error: " . $e->getMessage());
+        }
+    }
+    public function getP2PTradersPublicOpen()
+    {
+        $traders = $this->gateway->fetchAllData(p2p_traders);
+        if (is_array($traders)) {
+            $hidden = ['id', 'createdAt', 'updatedAt'];
+            foreach ($traders as $index => $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                foreach ($hidden as $field) {
+                    unset($row[$field]);
+                }
+                $traders[$index] = $row;
+            }
+        }
+        return $this->response->success($traders);
+    }
+    public function getP2PAssets()
+    {
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+
+        $token = $matches[1];
+        try {
+            $this->jwtCodec->decode($token);
+            $assets = [
+                'BTC', 'ETH', 'USDT', 'XRP', 'BNB', 'USDC', 'SOL', 'TRX',
+                'DOGE', 'BCH', 'ADA', 'HYPE', 'LEO', 'USDe', 'CC'
+            ];
+            return $this->response->success($assets);
         } catch (InvalidArgumentException $e) {
             return $this->response->unauthorized("Invalid token format.");
         } catch (InvalidSignatureException $e) {

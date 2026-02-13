@@ -239,14 +239,51 @@ class PutGateway
 
     public function updateP2PTrader(array $data, string $accToken)
     {
+        $allowedFields = [
+            'name', 'username', 'merchantType', 'verified', 'emailVerified', 'smsVerified', 'idVerified',
+            'topSeller', 'asset', 'fiatCurrency', 'priceType', 'priceValue', 'priceMargin',
+            'referencePriceSource', 'completion', 'orders', 'price', 'limits', 'minLimit', 'maxLimit',
+            'quantity', 'availableQuantity', 'avgRelease', 'avgReleaseMinutes', 'orderTimeLimitMinutes',
+            'payment', 'paymentMethods', 'paymentDetails', 'country', 'allowedRegions', 'blockedRegions', 'kycRequired',
+            'kycTierRequired', 'complianceNote', 'status', 'isOnline', 'isHidden', 'isDeleted',
+            'lastActive', 'adType', 'terms', 'paymentWindow', 'rating', 'ratingCount', 'thirtyDayVolume',
+            'thirtyDayTrades', 'cancelRate', 'appealRate', 'approvedBy', 'approvedAt', 'updatedBy'
+        ];
+
         unset($data['id']);
-        $keys = array_keys($data);
+        $filtered = array_intersect_key($data, array_flip($allowedFields));
+        if (isset($filtered['username'])) {
+            $filtered['username'] = ltrim(trim((string) $filtered['username']), '@');
+        }
+        foreach (['emailVerified', 'smsVerified', 'idVerified', 'topSeller', 'isOnline', 'isHidden', 'isDeleted'] as $boolField) {
+            if (array_key_exists($boolField, $filtered)) {
+                $value = $filtered[$boolField];
+                if (is_bool($value)) {
+                    $filtered[$boolField] = $value ? 'true' : 'false';
+                } else {
+                    $normalized = strtolower(trim((string) $value));
+                    $filtered[$boolField] = in_array($normalized, ['true', '1', 'yes', 'y'], true) ? 'true' : 'false';
+                }
+            }
+        }
+        foreach (['paymentMethods', 'allowedRegions', 'blockedRegions'] as $jsonField) {
+            if (array_key_exists($jsonField, $filtered) && is_array($filtered[$jsonField])) {
+                $filtered[$jsonField] = json_encode(array_values($filtered[$jsonField]), JSON_UNESCAPED_UNICODE);
+            }
+        }
+        if (array_key_exists('paymentDetails', $filtered) && (is_array($filtered['paymentDetails']) || is_object($filtered['paymentDetails']))) {
+            $filtered['paymentDetails'] = json_encode($filtered['paymentDetails'], JSON_UNESCAPED_UNICODE);
+        }
+        if (empty($filtered)) {
+            return $this->response->unprocessableEntity('No valid fields to update.');
+        }
+        $keys = array_keys($filtered);
 
         $updated = $this->connectToDataBase->updateDataWithArrayKey(
             $this->dbConnection,
             p2p_traders,
             $keys,
-            $data,
+            $filtered,
             'id',
             $accToken
         );
@@ -255,6 +292,51 @@ class PutGateway
             $this->response->created("P2P trader updated successfully.");
         } else {
             $this->response->unprocessableEntity('Error updating P2P trader.');
+        }
+    }
+
+    public function updateP2POrder(array $data, string $accToken)
+    {
+        $allowedFields = [
+            'adType', 'coin', 'fiat', 'fiatAmount', 'cryptoAmount', 'price', 'paymentMethod',
+            'paymentMethods', 'paymentDetails', 'merchant', 'orders', 'completion', 'limitRange',
+            'quantity', 'status', 'userRelease', 'reservedAmount', 'confirmedAt', 'uploadedImages',
+            'paymentTiming'
+        ];
+
+        unset($data['orderId']);
+        $filtered = array_intersect_key($data, array_flip($allowedFields));
+
+        foreach (['paymentMethods', 'uploadedImages'] as $jsonField) {
+            if (array_key_exists($jsonField, $filtered) && is_array($filtered[$jsonField])) {
+                $filtered[$jsonField] = json_encode(array_values($filtered[$jsonField]), JSON_UNESCAPED_UNICODE);
+            }
+        }
+        foreach (['paymentDetails', 'paymentTiming'] as $jsonField) {
+            if (array_key_exists($jsonField, $filtered) && (is_array($filtered[$jsonField]) || is_object($filtered[$jsonField]))) {
+                $filtered[$jsonField] = json_encode($filtered[$jsonField], JSON_UNESCAPED_UNICODE);
+            }
+        }
+
+        if (empty($filtered)) {
+            return $this->response->unprocessableEntity('No valid fields to update.');
+        }
+        $filtered['updatedAt'] = date('Y-m-d H:i:s');
+        $keys = array_keys($filtered);
+
+        $updated = $this->connectToDataBase->updateDataWithArrayKey(
+            $this->dbConnection,
+            p2p_orders,
+            $keys,
+            $filtered,
+            'orderId',
+            $accToken
+        );
+
+        if ($updated) {
+            $this->response->created("P2P order updated successfully.");
+        } else {
+            $this->response->unprocessableEntity('Error updating P2P order.');
         }
     }
 

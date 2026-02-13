@@ -43,6 +43,8 @@ return [
     'tokenRevoked' => 'VARCHAR(10) DEFAULT "false"',
     'allowOtp' => 'VARCHAR(100) DEFAULT "false"',
     'balances_json' => 'JSON DEFAULT (JSON_ARRAY())',
+    'p2pPaymentMethod' => 'VARCHAR(50) DEFAULT NULL',
+    'p2pPaymentDetails' => 'TEXT DEFAULT NULL',
     'tokenExpiry' => 'VARCHAR(100) DEFAULT NULL',
     'refreshToken' => 'VARCHAR(255) DEFAULT NULL',
     'totp_secret' => 'VARCHAR(255) DEFAULT NULL',

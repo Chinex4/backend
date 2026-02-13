@@ -71,6 +71,9 @@ class AdminPatchService{
             case "disableOtp": 
                 $this->patch->disableOtp($accToken);
                 break;
+            case "releaseP2POrder":
+                $this->patch->releaseP2POrder($accToken, $data);
+                break;
             
         }
     }
