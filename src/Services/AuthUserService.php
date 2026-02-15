@@ -36,6 +36,7 @@ class AuthUserService
     private $institutionalVerificationColumn;
     private $depositColumn;
     private $p2pOrderColumn;
+    private $copyTradeSettingsColumn;
     private $patchGateway;
 
     public function __construct($pdoConnection)
@@ -49,6 +50,7 @@ class AuthUserService
         $this->institutionalVerificationColumn = require __DIR__ . '/../Config/institutionalVerificationColumn.php';
         $this->depositColumn = require __DIR__ . '/../Config/DepositColumn.php';
         $this->p2pOrderColumn = require __DIR__ . '/../Config/P2POrderColumn.php';
+        $this->copyTradeSettingsColumn = require __DIR__ . '/../Config/CopyTradeSettingsColumn.php';
         $this->gateway = new TaskGatewayFunction($this->dbConnection);
         $this->userDataGenerator = new UserDataGenerator($this->gateway);
         $this->EmailDataGenerator = new EmailDataGenerator($this->gateway);
@@ -519,6 +521,146 @@ class AuthUserService
 
             return $this->response->created(['message' => 'Order created successfully.', 'orderId' => $orderId]);
 
+        } catch (InvalidArgumentException $e) {
+            return $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            return $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            return $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            return $this->response->unprocessableEntity("Token decode error: " . $e->getMessage());
+        }
+    }
+
+    public function startCopyTrading(array $data)
+    {
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            return $this->response->unauthorized("Authorization header missing or invalid");
+        }
+
+        $token = $matches[1];
+
+        try {
+            $decodedPayload = $this->jwtCodec->decode($token);
+            $userId = $decodedPayload['sub'];
+
+            $user = $this->gateway->fetchData(RegTable, ['id' => $userId]);
+            if (!$user || !is_array($user)) {
+                return $this->response->unprocessableEntity('User not found.');
+            }
+
+            $traderId = isset($data['traderId']) ? (int) $data['traderId'] : 0;
+            if ($traderId <= 0) {
+                return $this->response->unprocessableEntity('Valid traderId is required.');
+            }
+
+            $trader = $this->gateway->fetchDataWithId(copy_trade, $traderId);
+            if (!$trader || !is_array($trader)) {
+                return $this->response->unprocessableEntity('Trader not found.');
+            }
+
+            $amountMode = strtolower((string) ($data['amountMode'] ?? 'multiplier'));
+            if (!in_array($amountMode, ['multiplier', 'fixed'], true)) {
+                return $this->response->unprocessableEntity('Invalid amountMode.');
+            }
+
+            $marginMode = strtolower((string) ($data['marginMode'] ?? 'same'));
+            if (!in_array($marginMode, ['same', 'cross', 'isolated'], true)) {
+                return $this->response->unprocessableEntity('Invalid marginMode.');
+            }
+
+            $leverageMode = strtolower((string) ($data['leverageMode'] ?? 'same'));
+            if (!in_array($leverageMode, ['same', 'fixed'], true)) {
+                return $this->response->unprocessableEntity('Invalid leverageMode.');
+            }
+
+            $amount = isset($data['amount']) ? (float) $data['amount'] : 0;
+            if ($amount <= 0) {
+                return $this->response->unprocessableEntity('Amount must be greater than 0.');
+            }
+
+            $stopLoss = isset($data['stopLoss']) ? (float) $data['stopLoss'] : 0;
+            if ($stopLoss <= 0) {
+                return $this->response->unprocessableEntity('Valid stopLoss is required.');
+            }
+
+            $slippageRange = isset($data['slippageRange']) ? (float) $data['slippageRange'] : 0;
+            if ($slippageRange <= 0) {
+                return $this->response->unprocessableEntity('Valid slippageRange is required.');
+            }
+
+            $agree = filter_var($data['agree'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+            if (!$agree) {
+                return $this->response->unprocessableEntity('You must accept the user agreement.');
+            }
+
+            $amountPerOrder =
+                $amountMode === 'fixed' && isset($data['amountPerOrder'])
+                    ? (float) $data['amountPerOrder']
+                    : null;
+
+            $fixedLeverage =
+                $leverageMode === 'fixed' && isset($data['fixedLeverage'])
+                    ? (float) $data['fixedLeverage']
+                    : null;
+
+            $createdAt = $data['createdAt'] ?? date('Y-m-d H:i:s');
+            $copyRequestId = $this->gateway->generateRandomCode();
+
+            $copyData = [
+                'copyRequestId' => $copyRequestId,
+                'userId' => $user['accToken'],
+                'traderId' => $traderId,
+                'amountMode' => $amountMode,
+                'amountPerOrder' => $amountPerOrder,
+                'amount' => $amount,
+                'stopLoss' => $stopLoss,
+                'marginMode' => $marginMode,
+                'leverageMode' => $leverageMode,
+                'fixedLeverage' => $fixedLeverage,
+                'slippageRange' => $slippageRange,
+                'agree' => $agree,
+                'status' => 'active',
+                'createdAt' => $createdAt,
+                'updatedAt' => null,
+                'ipAddress' => $this->gateway->getIPAddress(),
+            ];
+
+            $createCopyTable = $this->createDbTables->createTableWithTypes(
+                copy_trade_settings,
+                $this->copyTradeSettingsColumn
+            );
+            if (!$createCopyTable) {
+                return $this->response->unprocessableEntity('Could not create copy trading table.');
+            }
+
+            $bindingArray = $this->gateway->generateRandomStrings($copyData);
+            $inserted = $this->connectToDataBase->insertDataWithTypes(
+                $this->dbConnection,
+                copy_trade_settings,
+                $this->copyTradeSettingsColumn,
+                $bindingArray,
+                $copyData
+            );
+
+            if (!$inserted) {
+                return $this->response->unprocessableEntity('Could not save copy trading settings.');
+            }
+
+            $this->gateway->createNotificationMessage(
+                $userId,
+                'Copy Trading Started',
+                'Your copy trading settings have been submitted successfully.',
+                $createdAt
+            );
+
+            return $this->response->created([
+                'copyRequestId' => $copyRequestId,
+                'status' => 'active',
+            ]);
         } catch (InvalidArgumentException $e) {
             return $this->response->unauthorized("Invalid token format.");
         } catch (InvalidSignatureException $e) {

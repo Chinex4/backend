@@ -68,7 +68,6 @@ class FetchGateway
                     'antiPhishingCode',
                     'withdrawalSecurity',
                     'uid',
-                    'currency',
                     'verifyUser',
                     'UserLogin',
                     'AllowLogin',
@@ -81,11 +80,6 @@ class FetchGateway
                     'kyc',
                     'identityNumber',
                     'ipAdress',
-                    'totalAsset',
-                    'spotAccount',
-                    'futureAccount',
-                    'earnAccount',
-                    'copyAccount',
                     'referralBonus',
                     'Message',
                     'allowMessage',
@@ -218,6 +212,26 @@ class FetchGateway
     {
         $orders = $this->gateway->fetchAllData(p2p_orders);
         return $this->response->success($orders);
+    }
+    public function getCopyTradeProfiles()
+    {
+        $profiles = $this->gateway->fetchAllData(copy_trade);
+        return $this->response->success($profiles);
+    }
+    public function fetchcopytrade()
+    {
+        return $this->getCopyTradeProfiles();
+    }
+    public function getCopyTradeOrders()
+    {
+        $copyTradeSettingsColumn = require __DIR__ . '/Config/CopyTradeSettingsColumn.php';
+        $this->createDbTables->createTableWithTypes(copy_trade_settings, $copyTradeSettingsColumn);
+        $orders = $this->gateway->fetchAllData(copy_trade_settings);
+        return $this->response->success($orders);
+    }
+    public function fetchcopytradeorder()
+    {
+        return $this->getCopyTradeOrders();
     }
     public function getP2PTradersPublic()
     {
@@ -416,3 +430,4 @@ class FetchGateway
 
 
 }
+

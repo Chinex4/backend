@@ -15,6 +15,8 @@ DEFINE('wallet', 'coin_wallets');
 DEFINE('deposit', 'deposit'); 
 DEFINE('p2p_traders', 'p2p_traders'); 
 DEFINE('p2p_orders', 'p2p_orders'); 
+DEFINE('copy_trade', 'copy_trade'); 
+DEFINE('copy_trade_settings', 'copy_trade_settings'); 
 DEFINE('refresh_token', 'refresh_token'); 
 DEFINE('sitelink', ipAddress.':5173/'); 
 DEFINE('apiLink', ipAddress.'cashtradeproApi/'); 

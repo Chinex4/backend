@@ -340,7 +340,175 @@ class PutGateway
         }
     }
 
+    public function updateCopyTrade(array $data, string $accToken, array $file = [])
+    {
+        $allowedFields = [
+            'display_name', 'username', 'avatar', 'status', 'kyc_status',
+            'copiers_count', 'aum_usd', 'total_return_pct', 'roi_30d_pct', 'roi_90d_pct',
+            'profit_factor', 'total_trades', 'max_drawdown_pct', 'volatility_30d', 'sharpe_ratio',
+            'avg_leverage', 'risk_score', 'liquidation_events', 'win_rate_pct', 'profit_share_pct',
+            'management_fee_pct', 'min_copy_amount_usd', 'max_copiers', 'copy_mode',
+            'slippage_limit_pct', 'markets', 'instruments', 'time_horizon',
+            'strategy_description', 'tags', 'verified_track_record', 'exchange_linked',
+            'warning_flags', 'terms_accepted_at', 'last_active_at', 'created_at', 'is_public'
+        ];
 
+        unset($data['id']);
+        $filtered = array_intersect_key($data, array_flip($allowedFields));
+
+        if (isset($file['avatar']) && is_array($file['avatar']) && !empty($file['avatar']['name'])) {
+            $uploadedAvatar = $this->gateway->processImageWithgivenNameFiles($file['avatar']);
+            if (is_string($uploadedAvatar) && $uploadedAvatar !== '') {
+                $filtered['avatar'] = $uploadedAvatar;
+            } else {
+                return;
+            }
+        }
+
+        if (array_key_exists('username', $filtered)) {
+            $filtered['username'] = strtolower(preg_replace('/[^a-z0-9_]/i', '', trim((string) $filtered['username'])));
+            if ($filtered['username'] === '') {
+                unset($filtered['username']);
+            }
+        }
+
+        foreach (['markets', 'instruments', 'tags', 'warning_flags'] as $jsonField) {
+            if (!array_key_exists($jsonField, $filtered)) {
+                continue;
+            }
+            if (is_array($filtered[$jsonField]) || is_object($filtered[$jsonField])) {
+                $filtered[$jsonField] = json_encode($filtered[$jsonField], JSON_UNESCAPED_UNICODE);
+                continue;
+            }
+            if (is_string($filtered[$jsonField])) {
+                $trimmed = trim($filtered[$jsonField]);
+                if ($trimmed === '') {
+                    $filtered[$jsonField] = json_encode([]);
+                    continue;
+                }
+                $decoded = json_decode($trimmed, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $filtered[$jsonField] = json_encode($decoded, JSON_UNESCAPED_UNICODE);
+                } else {
+                    $parts = array_values(array_filter(array_map('trim', explode(',', $trimmed)), function ($v) {
+                        return $v !== '';
+                    }));
+                    $filtered[$jsonField] = json_encode($parts, JSON_UNESCAPED_UNICODE);
+                }
+            }
+        }
+
+        foreach (['verified_track_record', 'exchange_linked', 'is_public'] as $boolField) {
+            if (!array_key_exists($boolField, $filtered)) {
+                continue;
+            }
+            $value = $filtered[$boolField];
+            if (is_bool($value)) {
+                $filtered[$boolField] = $value ? 1 : 0;
+            } elseif (is_numeric($value)) {
+                $filtered[$boolField] = ((int) $value) === 1 ? 1 : 0;
+            } else {
+                $normalized = strtolower(trim((string) $value));
+                $filtered[$boolField] = in_array($normalized, ['true', '1', 'yes', 'y', 'on'], true) ? 1 : 0;
+            }
+        }
+
+        foreach (['copiers_count', 'total_trades', 'risk_score', 'liquidation_events', 'max_copiers'] as $intField) {
+            if (array_key_exists($intField, $filtered) && is_numeric($filtered[$intField])) {
+                $filtered[$intField] = (int) $filtered[$intField];
+            }
+        }
+
+        foreach ([
+            'aum_usd', 'total_return_pct', 'roi_30d_pct', 'roi_90d_pct', 'profit_factor',
+            'max_drawdown_pct', 'volatility_30d', 'sharpe_ratio', 'avg_leverage', 'win_rate_pct',
+            'profit_share_pct', 'management_fee_pct', 'min_copy_amount_usd', 'slippage_limit_pct'
+        ] as $floatField) {
+            if (array_key_exists($floatField, $filtered) && is_numeric($filtered[$floatField])) {
+                $filtered[$floatField] = (float) $filtered[$floatField];
+            }
+        }
+
+        if (empty($filtered)) {
+            return $this->response->unprocessableEntity('No valid fields to update.');
+        }
+
+        $keys = array_keys($filtered);
+        $updated = $this->connectToDataBase->updateDataWithArrayKey(
+            $this->dbConnection,
+            copy_trade,
+            $keys,
+            $filtered,
+            'id',
+            $accToken
+        );
+
+        if ($updated) {
+            $this->response->created("Copy trade profile updated successfully.");
+        } else {
+            $this->response->unprocessableEntity('Error updating copy trade profile.');
+        }
+    }
+
+    public function updateCopyTradeOrderSettings(array $data, string $accToken)
+    {
+        $copyTradeSettingsColumn = require __DIR__ . '/Config/CopyTradeSettingsColumn.php';
+        $allowedFields = array_keys($copyTradeSettingsColumn);
+
+        unset($data['id']);
+        $filtered = array_intersect_key($data, array_flip($allowedFields));
+
+        foreach (['traderId'] as $intField) {
+            if (array_key_exists($intField, $filtered) && is_numeric($filtered[$intField])) {
+                $filtered[$intField] = (int) $filtered[$intField];
+            }
+        }
+
+        foreach (['amountPerOrder', 'amount', 'stopLoss', 'fixedLeverage', 'slippageRange'] as $floatField) {
+            if (array_key_exists($floatField, $filtered) && is_numeric($filtered[$floatField])) {
+                $filtered[$floatField] = (float) $filtered[$floatField];
+            }
+        }
+
+        if (array_key_exists('agree', $filtered)) {
+            $value = $filtered['agree'];
+            if (is_bool($value)) {
+                $filtered['agree'] = $value ? 1 : 0;
+            } elseif (is_numeric($value)) {
+                $filtered['agree'] = ((int) $value) === 1 ? 1 : 0;
+            } else {
+                $normalized = strtolower(trim((string) $value));
+                $filtered['agree'] = in_array($normalized, ['true', '1', 'yes', 'y', 'on'], true) ? 1 : 0;
+            }
+        }
+
+        if (empty($filtered)) {
+            return $this->response->unprocessableEntity('No valid fields to update.');
+        }
+
+        $filtered['updatedAt'] = $data['updatedAt'] ?? date('Y-m-d H:i:s');
+        $keys = array_keys($filtered);
+
+        $created = $this->createDbTables->createTableWithTypes(copy_trade_settings, $copyTradeSettingsColumn);
+        if (!$created) {
+            return $this->response->unprocessableEntity('Could not prepare copy trade settings table.');
+        }
+
+        $updated = $this->connectToDataBase->updateDataWithArrayKey(
+            $this->dbConnection,
+            copy_trade_settings,
+            $keys,
+            $filtered,
+            'id',
+            $accToken
+        );
+
+        if ($updated) {
+            $this->response->created("Copy trade settings updated successfully.");
+        } else {
+            $this->response->unprocessableEntity('Error updating copy trade settings.');
+        }
+    }
 
 }
 

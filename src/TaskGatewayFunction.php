@@ -614,7 +614,20 @@ public function processImageWithgivenNameFiles($file)
         $fileDestination = $uploadDirectory . $newFileName;
         // var_dump($fileTemp);
         if (!move_uploaded_file($fileTemp, $fileDestination)) {
-            $errors[] = 5;
+            // Fallback for non-POST multipart parsing (e.g., PUT form-data).
+            $moved = false;
+            if (is_string($fileTemp) && file_exists($fileTemp)) {
+                $moved = @rename($fileTemp, $fileDestination);
+                if (!$moved) {
+                    $moved = @copy($fileTemp, $fileDestination);
+                    if ($moved) {
+                        @unlink($fileTemp);
+                    }
+                }
+            }
+            if (!$moved) {
+                $errors[] = 5;
+            }
         }
         if (!empty($errors)) {
             return $errors;

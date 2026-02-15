@@ -53,6 +53,15 @@ class AdminfetchService{
             case "p2pOrders":
                 $this->fetch->getP2POrders();
                 break;
+            case "copyTradeProfiles":
+                $this->fetch->getCopyTradeProfiles();
+                break;
+            case "fetchcopytrade":
+                $this->fetch->fetchcopytrade();
+                break;
+            case "fetchcopytradeorder":
+                $this->fetch->fetchcopytradeorder();
+                break;
         }
     }
 }

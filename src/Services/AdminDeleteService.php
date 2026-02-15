@@ -47,6 +47,10 @@ class AdminDeleteService{
             case "p2pOrders":
                 $this->delete->deleteP2POrder($id);
                 break;
+            case "copytradeorderr":
+            case "copytradeorder":
+                $this->delete->deleteCopyTradeOrder($id);
+                break;
         }
     }
 }

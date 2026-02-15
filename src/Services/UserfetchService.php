@@ -51,7 +51,13 @@ class UserfetchService{
             case "p2pAssets":
                 $this->fetch->getP2PAssets();
                 break;
-             
+            case "fetchcopytrade":
+                $this->fetch->fetchcopytrade();
+                break;
+            case "fetchLeadTraders":
+                $this->fetch->fetchcopytrade();
+                break;
+               
             case "getorder": 
                 $this->fetch->getP2POrder($id);
                 break;

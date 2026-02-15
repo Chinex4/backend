@@ -18,7 +18,7 @@ class AdminPostService{
         $this->pdovar = null;
     }
 
-    public function handlePost(string $action, $data): void
+    public function handlePost(string $action, $data, $file = null): void
     {
         switch ($action) {
             case "login":
@@ -29,6 +29,12 @@ class AdminPostService{
                 break;
             case "addP2PTrader":
                 $this->adminauthservice->addP2PTrader($data);
+                break;
+            case "addCopyTrader":
+                $this->adminauthservice->addCopyTrade($data ?? [], $file ?? []);
+                break;
+            case "seedCopyTradeData":
+                $this->adminauthservice->seedCopyTradeData($data ?? []);
                 break;
         }
     }

@@ -26,7 +26,7 @@ class AdminPutService{
         $this->pdovar = null;
     }
 
-    public function handleAdminPut(string $action,  ?array $data, string $accToken): void
+    public function handleAdminPut(string $action,  ?array $data, string $accToken, $file = null): void
     {
         switch ($action) {
             case "updateUser": 
@@ -47,6 +47,16 @@ class AdminPutService{
             case "p2pOrders":
                 $this->put->updateP2POrder($data, $accToken);
                 break;
+            case "updatecopytrade":
+                $this->put->updateCopyTrade($data ?? [], $accToken, $file ?? []);
+                break;
+            case "copytradeorderr":
+                $this->put->updateCopyTradeOrderSettings($data ?? [], $accToken);
+                break;
+            case "copytradeorder":
+                $this->put->updateCopyTradeOrderSettings($data ?? [], $accToken);
+                break;
+
         }
     }
 }

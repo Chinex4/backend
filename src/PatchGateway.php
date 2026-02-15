@@ -422,6 +422,337 @@ class PatchGateway
 
     }
 
+    public function confirmP2POrder(array $data, string $orderId, array $file = []): void
+    {
+        
+        $headers = apache_request_headers();
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+
+        if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            $this->response->unauthorized("Authorization header missing or invalid");
+            return;
+        }
+
+        $orderId = trim($orderId ?: ($data['orderId'] ?? ''));
+        if ($orderId === '') {
+            $this->response->unprocessableEntity('orderId is required.');
+            return;
+        }
+
+        try {
+            $decodedPayload = $this->jwtCodec->decode($matches[1]);
+            $userId = (string) ($decodedPayload['sub'] ?? '');
+            if ($userId === '') {
+                $this->response->unauthorized("Invalid token payload.");
+                return;
+            }
+
+            $order = $this->gateway->fetchData(p2p_orders, ['orderId' => $orderId]);
+            if (!$order || !is_array($order)) {
+                $this->response->unprocessableEntity('Order not found.');
+                return;
+            }
+
+            if ((string) ($order['userId'] ?? '') !== $userId) {
+                $this->response->forbidden('You are not allowed to confirm this order.');
+                return;
+            }
+
+            $currentStatus = (string) ($order['status'] ?? '');
+            if (in_array($currentStatus, ['Released', 'Completed'], true)) {
+                $this->response->unprocessableEntity('This order can no longer be confirmed.');
+                return;
+            }
+
+            $confirmedAt = $data['confirmedAt'] ?? date('Y-m-d H:i:s');
+            $updatedAt = $data['updatedAt'] ?? $confirmedAt;
+
+            $uploadedImages = [];
+            foreach ($file as $fileKey => $fileValue) {
+                if (!is_array($fileValue) || !isset($fileValue['name'])) {
+                    continue;
+                }
+
+                // Handles multi-file format: $_FILES['documents']['name'][0...]
+                if (is_array($fileValue['name'])) {
+                    foreach ($fileValue['name'] as $index => $name) {
+                        $singleFile = [
+                            'name' => $name,
+                            'type' => $fileValue['type'][$index] ?? '',
+                            'tmp_name' => $fileValue['tmp_name'][$index] ?? '',
+                            'error' => $fileValue['error'][$index] ?? 4,
+                            'size' => $fileValue['size'][$index] ?? 0,
+                        ];
+                        $uploaded = $this->gateway->processImageWithgivenNameFiles($singleFile);
+                        if (is_string($uploaded) && $uploaded !== '') {
+                            $uploadedImages[] = $uploaded;
+                        }
+                    }
+                    continue;
+                }
+
+                // Handles top-level keyed files: image_0, image_1, paymentProof, etc.
+                $uploaded = $this->gateway->processImageWithgivenNameFiles($fileValue);
+                if (is_string($uploaded) && $uploaded !== '') {
+                    $uploadedImages[] = $uploaded;
+                }
+            }
+            $paymentTiming = null;
+            if (isset($data['paymentTiming'])) {
+                if (is_array($data['paymentTiming']) || is_object($data['paymentTiming'])) {
+                    $paymentTiming = json_encode($data['paymentTiming'], JSON_UNESCAPED_SLASHES);
+                } elseif (is_string($data['paymentTiming']) && trim($data['paymentTiming']) !== '') {
+                    $paymentTiming = $data['paymentTiming'];
+                }
+            } elseif (isset($data['paidAt']) || isset($data['paidTime']) || isset($data['paymentAt'])) {
+                $paymentTiming = json_encode(
+                    [
+                        'paidAt' => $data['paidAt'] ?? $data['paidTime'] ?? $data['paymentAt'],
+                        'confirmedAt' => $confirmedAt,
+                    ],
+                    JSON_UNESCAPED_SLASHES
+                );
+            }
+
+            $columns = ['status', 'confirmedAt', 'updatedAt'];
+            $values = ['Confirmed', $confirmedAt, $updatedAt];
+
+            if (!empty($uploadedImages)) {
+                $columns[] = 'uploadedImages';
+                $values[] = json_encode(array_values($uploadedImages), JSON_UNESCAPED_SLASHES);
+            } elseif (isset($data['uploadedImages'])) {
+                $columns[] = 'uploadedImages';
+                if (is_array($data['uploadedImages']) || is_object($data['uploadedImages'])) {
+                    $values[] = json_encode($data['uploadedImages'], JSON_UNESCAPED_SLASHES);
+                } else {
+                    $values[] = $data['uploadedImages'];
+                }
+            }
+
+            if ($paymentTiming !== null) {
+                $columns[] = 'paymentTiming';
+                $values[] = $paymentTiming;
+            }
+
+            $createColumn = $this->createDbTables->createTable(p2p_orders, $columns);
+            if (!$createColumn) {
+                $this->response->unprocessableEntity('Could not prepare P2P order table.');
+                return;
+            }
+
+            $updated = $this->connectToDataBase->updateData(
+                $this->dbConnection,
+                p2p_orders,
+                $columns,
+                $values,
+                'orderId',
+                $orderId
+            );
+
+            if (!$updated) {
+                $this->response->unprocessableEntity('Could not confirm this order.');
+                return;
+            }
+
+            $this->gateway->createNotificationMessage(
+                (int) $userId,
+                'P2P Order Confirmed',
+                'Your payment confirmation has been submitted. Please wait for release.',
+                $confirmedAt
+            );
+
+            $this->response->created([
+                'message' => 'Order confirmed successfully.',
+                'orderId' => $orderId,
+                'status' => 'Confirmed',
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $this->response->unauthorized("Invalid token format.");
+        } catch (InvalidSignatureException $e) {
+            $this->response->unauthorized("Invalid token signature.");
+        } catch (TokenExpiredException $e) {
+            $this->response->unauthorized("Token has expired.");
+        } catch (Exception $e) {
+            $this->response->unprocessableEntity("Token decode error: " . $e->getMessage());
+        }
+    }
+
+
+
+
+
+    
+
+    public function releaseP2POrder(string $orderId, ?array $data = null): void
+    {
+        $orderId = trim($orderId);
+        if ($orderId === '') {
+            $this->response->unprocessableEntity('orderId is required.');
+            return;
+        }
+
+        $payload = is_array($data) ? $data : [];
+        $releasedAt = $payload['actionDate'] ?? $payload['releasedAt'] ?? date('Y-m-d H:i:s');
+
+        $order = $this->gateway->fetchData(p2p_orders, ['orderId' => $orderId]);
+        if (!$order || !is_array($order)) {
+            $this->response->unprocessableEntity('Order not found.');
+            return;
+        }
+
+        $currentStatus = (string) ($order['status'] ?? '');
+        if ($currentStatus === 'Released') {
+            $this->response->created('P2P order is already released.');
+            return;
+        }
+        if ($currentStatus === 'Cancelled') {
+            $this->response->unprocessableEntity('Cancelled order cannot be released.');
+            return;
+        }
+
+        $targetUserId = (string) ($order['userId'] ?? '');
+        if ($targetUserId === '') {
+            $this->response->unprocessableEntity('Invalid order owner.');
+            return;
+        }
+
+        $targetUser = $this->gateway->fetchData(RegTable, ['id' => $targetUserId]);
+        if (!$targetUser || !is_array($targetUser)) {
+            $this->response->unprocessableEntity('Order owner not found.');
+            return;
+        }
+
+        $orderPrice = isset($order['price']) ? (float) $order['price'] : 0.0;
+        $cryptoAmount = isset($order['cryptoAmount']) ? (float) $order['cryptoAmount'] : 0.0;
+        $orderValue = $orderPrice * $cryptoAmount;
+        if ($orderValue <= 0 && isset($order['fiatAmount'])) {
+            $orderValue = (float) $order['fiatAmount'];
+        }
+
+        $coinId = $this->resolveCoinIdForP2P((string) ($order['coin'] ?? ''));
+        $balances = [];
+        if (!empty($targetUser['balances_json'])) {
+            $decodedBalances = json_decode($targetUser['balances_json'], true);
+            if (is_array($decodedBalances)) {
+                $balances = $decodedBalances;
+            }
+        }
+
+        if ($coinId !== null) {
+            $found = false;
+            foreach ($balances as $index => $item) {
+                if (($item['id'] ?? null) === $coinId) {
+                    $currentBalance = isset($item['balance']) ? (float) $item['balance'] : 0.0;
+                    $balances[$index]['balance'] = $currentBalance + $orderValue;
+                    $balances[$index]['price'] = $cryptoAmount;
+                    $found = true;
+                    break;
+                }
+            }
+
+            if (!$found) {
+                $balances[] = [
+                    'id' => $coinId,
+                    'balance' => $orderValue,
+                    'price' => $cryptoAmount,
+                ];
+            }
+        }
+
+        $createUserColumns = $this->createDbTables->createTable(RegTable, ['totalAsset', 'spotAccount', 'balances_json']);
+        if (!$createUserColumns) {
+            $this->response->unprocessableEntity('Could not prepare user table.');
+            return;
+        }
+
+        $currentTotalAsset = isset($targetUser['totalAsset']) ? (float) $targetUser['totalAsset'] : 0.0;
+        $currentSpotAccount = isset($targetUser['spotAccount']) ? (float) $targetUser['spotAccount'] : 0.0;
+        $newTotalAsset = $currentTotalAsset + $orderValue;
+        $newSpotAccount = $currentSpotAccount + $orderValue;
+
+        $updatedUser = $this->connectToDataBase->updateData(
+            $this->dbConnection,
+            RegTable,
+            ['totalAsset', 'spotAccount', 'balances_json'],
+            [$newTotalAsset, $newSpotAccount, json_encode($balances, JSON_UNESCAPED_SLASHES)],
+            'id',
+            $targetUserId
+        );
+
+        if (!$updatedUser) {
+            $this->response->unprocessableEntity('Could not update user balances.');
+            return;
+        }
+
+        $columns = ['status', 'userRelease', 'releasedAt', 'updatedAt'];
+        $values = ['Released', $payload['userRelease'] ?? 'true', $releasedAt, $releasedAt];
+
+        $createColumn = $this->createDbTables->createTable(p2p_orders, $columns);
+        if (!$createColumn) {
+            $this->response->unprocessableEntity('Could not prepare P2P order table.');
+            return;
+        }
+
+        $updated = $this->connectToDataBase->updateData(
+            $this->dbConnection,
+            p2p_orders,
+            $columns,
+            $values,
+            'orderId',
+            $orderId
+        );
+
+        if (!$updated) {
+            $this->response->unprocessableEntity('Error releasing P2P order.');
+            return;
+        }
+
+        $ownerId = isset($order['userId']) ? (int) $order['userId'] : 0;
+        if ($ownerId > 0) {
+            $this->gateway->createNotificationMessage(
+                $ownerId,
+                'P2P Order Released',
+                'Your P2P order has been released successfully.',
+                $releasedAt
+            );
+        }
+
+        $this->response->created([
+            'message' => 'P2P order released successfully.',
+            'orderId' => $orderId,
+            'status' => 'Released',
+        ]);
+    }
+
+    private function resolveCoinIdForP2P(string $symbol): ?string
+    {
+        $symbol = strtoupper(trim($symbol));
+        if ($symbol === '') {
+            return null;
+        }
+
+        $walletRow = $this->gateway->fetchData(wallet, ['symbol' => $symbol]);
+        if (is_array($walletRow) && !empty($walletRow['coin_id'])) {
+            return $walletRow['coin_id'];
+        }
+
+        $fallback = [
+            'BTC' => 'bitcoin',
+            'ETH' => 'ethereum',
+            'USDT' => 'tether',
+            'USDC' => 'usd-coin',
+            'XRP' => 'ripple',
+            'BNB' => 'binancecoin',
+            'SOL' => 'solana',
+            'TRX' => 'tron',
+            'DOGE' => 'dogecoin',
+            'BCH' => 'bitcoin-cash',
+            'ADA' => 'cardano',
+        ];
+
+        return $fallback[$symbol] ?? null;
+    }
+
 
 }
 

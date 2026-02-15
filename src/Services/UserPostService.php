@@ -98,6 +98,9 @@ class UserPostService
             case "confirmorder":
                 $this->authService->confirmP2POrder($data ?? [], $file ?? []);
                 break;
+            case "startCopyTrading":
+                $this->authService->startCopyTrading($data ?? []);
+                break;
 
         }
     }

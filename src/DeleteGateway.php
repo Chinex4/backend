@@ -93,4 +93,14 @@ class DeleteGateway
             $this->response->unprocessableEntity('could not delete p2p order');
         }
     }
+
+    public function deleteCopyTradeOrder($id)
+    {
+        $deleted = $this->connectToDataBase->deleteData($this->dbConnection, copy_trade_settings, 'id', $id);
+        if ($deleted) {
+            return $this->response->success('this copy trade order has been deleted successfully');
+        } else {
+            $this->response->unprocessableEntity('could not delete copy trade order');
+        }
+    }
 }

@@ -30,9 +30,9 @@ class AdminGateway
 
  
   
-    public function handleAction(string $action, array $data): void
+    public function handleAction(string $action, array $data, $file = null): void
     {
-        $this->post->handlePost($action, $data);
+        $this->post->handlePost($action, $data, $file);
     }
     public function handleFetch(string $action): void
     {
@@ -42,9 +42,9 @@ class AdminGateway
     {
         $this->fetch->handleFetch($action);
     }
-    public function handleAdminPut(string $action,  ?array $data, string $accToken): void
+    public function handleAdminPut(string $action,  ?array $data, string $accToken, $file = null): void
     {
-        $this->put->handleAdminPut($action, $data, $accToken);
+        $this->put->handleAdminPut($action, $data, $accToken, $file);
     }
     public function handleAdminPatch(string $action,  ?array $data, string $accToken): void
     {
